@@ -1,0 +1,57 @@
+{
+    "main_asset": {
+        "symbol": "BTWTY.EOS",
+        "description": "BTWTY.EOS Portfolio"
+    },
+    "pools": [
+        {
+            "id": "1.19.508",
+            "asset_a": { "symbol": "XBTSX.BTC", "precision": 8 },
+            "asset_b": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "main_asset_side": "B",
+            "label": "BTWTY.EOSXBTCLP"
+        },
+        {
+            "id": "1.19.277",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "main_asset_side": "A",
+            "label": "BTWTY.BTSEOSLP"
+        },
+        {
+            "id": "1.19.501",
+            "asset_a": { "symbol": "XBTSX.LTC", "precision": 8 },
+            "asset_b": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "main_asset_side": "B",
+            "label": "BTWTY.EOSXLTCLP"
+        },
+        {
+            "id": "1.19.496",
+            "asset_a": { "symbol": "bitEUR", "precision": 4 },
+            "asset_b": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "main_asset_side": "B",
+            "label": "BTWTY.EOSEURLP"
+        },
+        {
+            "id": "1.19.513",
+            "asset_a": { "symbol": "bitGBP", "precision": 4 },
+            "asset_b": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "main_asset_side": "B",
+            "label": "BTWTY.EOSGBPLP"
+        },
+        {
+            "id": "1.19.481",
+            "asset_a": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "asset_b": { "symbol": "BTWTY.TUSC", "precision": 5 },
+            "main_asset_side": "A",
+            "label": "BTWTY.EOSXBTUSC"
+        },
+        {
+            "id": "1.19.276",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "main_asset_side": "B",
+            "label": "BTWTY.EOSLP"
+        }
+    ]
+}

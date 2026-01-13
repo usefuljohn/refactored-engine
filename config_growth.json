@@ -1,0 +1,108 @@
+{
+    "main_asset": {
+        "symbol": "TWENTIX",
+        "description": "TWENTIX Liquidity Network"
+    },
+    "pools": [
+        {
+            "id": "1.19.0",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "TWENTIX", "precision": 5 },
+            "main_asset_side": "B",
+            "label": "BTS"
+        },
+        {
+            "id": "1.19.240",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "BTS", "precision": 5 },
+            "main_asset_side": "A",
+            "label": "BTS^2"
+        },
+        {
+            "id": "1.19.41",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "TWENTIX", "precision": 5 },
+            "main_asset_side": "B",
+            "label": "BTWTY"
+        },
+        {
+            "id": "1.19.42",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "HONEST.USD", "precision": 4 },
+            "main_asset_side": "A",
+            "label": "USD",
+            "is_price_reference": true
+        },
+        {
+            "id": "1.19.248",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.USDC", "precision": 6 },
+            "main_asset_side": "A",
+            "label": "USDC",
+            "is_price_reference": true
+        },
+        {
+            "id": "1.19.281",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "TUSC", "precision": 5 },
+            "main_asset_side": "A",
+            "label": "TUSC"
+        },
+        {
+            "id": "1.19.44",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "XRP", "precision": 4 },
+            "main_asset_side": "A",
+            "label": "XRP"
+        },
+        {
+            "id": "1.19.273",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "VAULTA", "precision": 4 },
+            "main_asset_side": "A",
+            "label": "VAULTA"
+        },
+        {
+            "id": "1.19.391",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "HONEST.MONEY", "precision": 8 },
+            "main_asset_side": "A",
+            "label": "HONEST.MONEY"
+        },
+        {
+            "id": "1.19.219",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "GOLDBACK", "precision": 5 },
+            "main_asset_side": "A",
+            "label": "GOLDBACK"
+        },
+        {
+            "id": "1.19.468",
+            "asset_a": { "symbol": "RUBLE", "precision": 5 },
+            "asset_b": { "symbol": "TWENTIX", "precision": 5 },
+            "main_asset_side": "B",
+            "label": "RUBLE"
+        },
+        {
+            "id": "1.19.156",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "TWENTIX.HUSDMM", "precision": 5 },
+            "main_asset_side": "A",
+            "label": "HUSDMM"
+        },
+        {
+            "id": "1.19.467",
+            "asset_a": { "symbol": "CNY", "precision": 4 },
+            "asset_b": { "symbol": "TWENTIX", "precision": 5 },
+            "main_asset_side": "B",
+            "label": "CNY"
+        },
+        {
+            "id": "1.19.249",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.STH", "precision": 6 },
+            "main_asset_side": "A",
+            "label": "XBTSX.STH"
+        }
+    ]
+}

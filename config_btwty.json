@@ -1,0 +1,44 @@
+{
+    "main_asset": {
+        "symbol": "BTWTY",
+        "description": "BTWTY Portfolio"
+    },
+    "pools": [
+        {
+            "id": "1.19.165",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.STH", "precision": 6 },
+            "label": "xbtsx.STHBTWTYLP"
+        },
+        {
+            "id": "1.19.170",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.BTC", "precision": 8 },
+            "label": "BTWTY.XBTCMM"
+        },
+        {
+            "id": "1.19.115",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.DOGE", "precision": 5 },
+            "label": "BTWTY.DOGEXBTSX"
+        },
+        {
+            "id": "1.19.464",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "IOB.XLM", "precision": 4 },
+            "label": "BTWTY.IOBXLM"
+        },
+        {
+            "id": "1.19.527",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "BTWTY", "precision": 5 },
+            "label": "BTWTY.BTSLP"
+        },
+        {
+            "id": "1.19.114",
+            "asset_a": { "symbol": "bitEUR", "precision": 4 },
+            "asset_b": { "symbol": "BTWTY", "precision": 5 },
+            "label": "BTWTY.EURMM"
+        }
+    ]
+}
