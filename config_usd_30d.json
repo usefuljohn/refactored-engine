@@ -1,6 +1,7 @@
 {
     "credit_offers": [
         { "id": "1.21.542", "precision": 6, "label": "USDT Offer" },
-        { "id": "1.21.533", "precision": 6, "label": "USDC Offer" }
+        { "id": "1.21.533", "precision": 6, "label": "USDC Offer" },
+        { "id": "1.21.655", "precision": 5, "label": "TWENTIX Offer", "asset_symbol": "TWENTIX" }
     ]
 }

@@ -1,0 +1,33 @@
+{
+    "main_asset": {
+        "symbol": "BTS",
+        "description": "BTS Portfolio"
+    },
+    "pools": [
+        {
+            "id": "1.19.133",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "IOB.XRP", "precision": 4 },
+            "label": "iob.BTSXRP"
+        },
+        {
+            "id": "1.19.58",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.BTC", "precision": 8 },
+            "label": "ABITS.BTSXBTCLP"
+        },
+        {
+            "id": "1.19.48",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.USDT", "precision": 6 },
+            "label": "WANGZI.LPBTSXU",
+            "is_price_reference": true
+        },
+        {
+            "id": "1.19.532",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "xbtsx.A", "precision": 6 },
+            "label": "ABITS.BTSXALP"
+        }
+    ]
+}

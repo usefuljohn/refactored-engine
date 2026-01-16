@@ -15,7 +15,8 @@ PORTFOLIOS = [
     {"name": "TWENTIX", "config": "config_growth.json", "output": "capital_history_twentix.csv"},
     {"name": "BTWTY", "config": "config_btwty.json", "output": "capital_history_btwty.csv"},
     {"name": "BTWTY.EOS", "config": "config_btwty_eos.json", "output": "capital_history_btwty_eos.csv"},
-    {"name": "USD^30D", "config": "config_usd_30d.json", "output": "capital_history_usd_30d.csv"}
+    {"name": "USD^30D", "config": "config_usd_30d.json", "output": "capital_history_usd_30d.csv"},
+    {"name": "BTS Portfolio", "config": "config_bts.json", "output": "capital_history_bts.csv"}
 ]
 
 def load_user_settings():
@@ -57,6 +58,78 @@ def get_asset_supply(asset_id):
     current_supply_raw = Decimal(dynamic_obj.get("current_supply", 0))
     return current_supply_raw / (Decimal(10) ** precision), precision
 
+def get_bts_price_usd(config):
+    """Determine BTS price in USD using reference pools"""
+    candidates = []
+    
+    # Priority: Check 1.19.48 specifically as requested
+    priority_pool_id = "1.19.48"
+    
+    # First pass: Look for priority pool in config or fetch it directly if needed
+    # But usually we rely on config. Let's iterate config.
+    
+    found_priority = False
+    
+    for pool in config.get("pools", []):
+        # Check for Priority Pool OR marked reference
+        if pool["id"] == priority_pool_id or pool.get("is_price_reference"):
+            
+            p_data = get_pool_data(pool["id"])
+            if not p_data:
+                continue
+            
+            # Identify BTS side
+            sym_a = pool["asset_a"]["symbol"]
+            sym_b = pool["asset_b"]["symbol"]
+            
+            if "BTS" not in (sym_a, sym_b):
+                continue
+                
+            is_bts_a = sym_a == "BTS"
+            
+            # Get precisions
+            prec_a = pool["asset_a"]["precision"]
+            prec_b = pool["asset_b"]["precision"]
+            
+            bal_a = Decimal(p_data["balance_a"]) / (Decimal(10) ** prec_a)
+            bal_b = Decimal(p_data["balance_b"]) / (Decimal(10) ** prec_b)
+            
+            if bal_a == 0 or bal_b == 0:
+                continue
+            
+            # We want Price of 1 BTS in USD
+            # Price = USD_Side / BTS_Side
+            
+            price = Decimal(0)
+            usd_sym = ""
+            
+            if is_bts_a:
+                # BTS is A, Other is B (presumably USD/Stable)
+                price = bal_b / bal_a
+                usd_sym = sym_b
+            else:
+                # BTS is B, Other is A
+                price = bal_a / bal_b
+                usd_sym = sym_a
+                
+            print(f"  Reference Price from {usd_sym} ({pool['id']}): ${price:.6f}")
+            
+            if pool["id"] == priority_pool_id:
+                # If we found the priority pool, we can just return this (or add to candidates with high weight)
+                # Let's return it immediately as it is the "Gold Standard" for BTS price here
+                print(f"  > Using Priority Pool {priority_pool_id} for BTS Price: ${price:.6f}")
+                return price
+            
+            candidates.append(price)
+            
+    if candidates:
+        avg_price = sum(candidates) / len(candidates)
+        print(f"  > Average BTS Price: ${avg_price:.6f}")
+        return avg_price
+        
+    print("  ! No price reference found for BTS.")
+    return None
+
 def get_twentix_price_usd(config):
     """Determine TWENTIX price in USD using reference pools"""
     # Look for pools marked as price reference
@@ -66,6 +139,10 @@ def get_twentix_price_usd(config):
     
     for pool in config.get("pools", []):
         if pool.get("is_price_reference"):
+            # Safety Check: Ensure this is actually a TWENTIX pool
+            if "TWENTIX" not in (pool["asset_a"]["symbol"], pool["asset_b"]["symbol"]):
+                continue
+
             # Check which side is TWENTIX (Asset A or B)
             # We want Price = USD_Amount / TWENTIX_Amount
             
@@ -306,7 +383,7 @@ def find_twentix_price_for_asset(target_asset_symbol, all_pools_config):
             
     return None
 
-def process_credit_portfolio(portfolio, config, accounts):
+def process_credit_portfolio(portfolio, config, accounts, prices=None):
     """Process a credit offer portfolio (TVL tracking)"""
     name = portfolio["name"]
     output_file = portfolio["output"]
@@ -349,11 +426,19 @@ def process_credit_portfolio(portfolio, config, accounts):
         
         real_balance = raw_balance / (Decimal(10) ** precision)
         
+        # Determine price
+        price = Decimal(1)
+        asset_symbol = offer_conf.get("asset_symbol")
+        if asset_symbol and prices and asset_symbol in prices and prices[asset_symbol]:
+             price = prices[asset_symbol]
+        
+        usd_value = real_balance * price
+
         owner = obj.get("owner_account")
         is_owned = owner in accounts
         
-        display_val = real_balance
-        user_val = real_balance if is_owned else Decimal(0)
+        display_val = usd_value
+        user_val = usd_value if is_owned else Decimal(0)
         
         print(f"{label:15} | TVL: ${display_val:,.2f} | Owner: {owner} | Included: {is_owned}")
         
@@ -402,6 +487,7 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
     twentix_price = prices.get("TWENTIX")
     btwty_eos_price = prices.get("BTWTY.EOS")
     btwty_price = prices.get("BTWTY")
+    bts_price = prices.get("BTS")
 
     print(f"\n=== Processing Portfolio: {name} ===")
     
@@ -414,7 +500,7 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
 
     # Dispatcher for Portfolio Type
     if "credit_offers" in config:
-        return process_credit_portfolio(portfolio, config, accounts)
+        return process_credit_portfolio(portfolio, config, accounts, prices)
 
     pools = config.get("pools", [])
     if not pools:
@@ -499,6 +585,13 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
                     pool_tvl_usd = (balance_a * btwty_price) * 2
                 else:
                     pool_tvl_usd = (balance_b * btwty_price) * 2
+
+            # Custom: BTS Valuation
+            elif bts_price and (asset_a_sym == "BTS" or asset_b_sym == "BTS"):
+                if asset_a_sym == "BTS":
+                    pool_tvl_usd = (balance_a * bts_price) * 2
+                else:
+                    pool_tvl_usd = (balance_b * bts_price) * 2
             
             # Method 2: TWENTIX Reference (Direct)
             elif asset_a_sym == "TWENTIX" or asset_b_sym == "TWENTIX":
@@ -610,15 +703,31 @@ def main():
     
     prices = {"TWENTIX": None, "BTWTY.EOS": None, "BTWTY": None}
     
+    # Get BTWTY.EOS price from Core Config
     try:
         with open("config_core.json", "r") as f:
             core_config = json.load(f)
-            prices["TWENTIX"] = get_twentix_price_usd(core_config)
             prices["BTWTY.EOS"] = get_btwty_eos_price_usd(core_config)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error loading config_core.json for prices: {e}")
+
+    # Get TWENTIX price from Growth Config (TWENTIX Portfolio)
+    try:
+        with open("config_growth.json", "r") as f:
+            growth_config = json.load(f)
+            prices["TWENTIX"] = get_twentix_price_usd(growth_config)
+    except Exception as e:
+        print(f"Error loading config_growth.json for prices: {e}")
 
     prices["BTWTY"] = get_btwty_price_usd()
+
+    # Get BTS price from BTS Portfolio Config
+    try:
+        with open("config_bts.json", "r") as f:
+            bts_config = json.load(f)
+            prices["BTS"] = get_bts_price_usd(bts_config)
+    except Exception as e:
+        print(f"Error loading config_bts.json for prices: {e}")
         
     grand_total = Decimal(0)
     

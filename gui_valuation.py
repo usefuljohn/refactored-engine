@@ -14,6 +14,8 @@ class PortfolioGUI:
         self.root.title("BitShares Portfolio Valuation")
         self.root.geometry("800x650") # Slightly taller
         
+        self.gold_price = Decimal(0)
+
         # Style
         style = ttk.Style()
         style.theme_use('clam')
@@ -49,7 +51,7 @@ class PortfolioGUI:
         tvl_frame = ttk.Frame(root, padding="5")
         tvl_frame.pack(fill=tk.X, padx=10)
         
-        # 1. Pool TVL Section
+        # 1. Gold Price Section
         frame_pool = ttk.Frame(tvl_frame)
         frame_pool.pack(side=tk.LEFT, padx=10)
         
@@ -59,29 +61,29 @@ class PortfolioGUI:
         
         lbl_pool_frame = ttk.Frame(frame_pool)
         lbl_pool_frame.pack(side=tk.LEFT, padx=5)
-        ttk.Label(lbl_pool_frame, text="XAUT Pool TVL", font=("Helvetica", 9, "bold")).pack(anchor=tk.W)
+        ttk.Label(lbl_pool_frame, text="Gold Price (USD/oz)", font=("Helvetica", 9, "bold")).pack(anchor=tk.W)
         self.tvl_value_label = ttk.Label(lbl_pool_frame, text="Fetching...", font=("Helvetica", 11), foreground="darkgreen")
         self.tvl_value_label.pack(anchor=tk.W)
 
         # Separator
         ttk.Separator(tvl_frame, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=20)
 
-        # 2. User Share Section
+        # 2. Grand Total Gold Visualization
         frame_user = ttk.Frame(tvl_frame)
         frame_user.pack(side=tk.LEFT, padx=10)
 
-        canvas_user = tk.Canvas(frame_user, width=50, height=50, highlightthickness=0)
-        canvas_user.pack(side=tk.LEFT)
-        self.draw_pot_of_gold(canvas_user)
+        # Wider canvas for stacking gold
+        self.gold_canvas = tk.Canvas(frame_user, width=300, height=80, highlightthickness=0)
+        self.gold_canvas.pack(side=tk.LEFT)
         
         lbl_user_frame = ttk.Frame(frame_user)
         lbl_user_frame.pack(side=tk.LEFT, padx=5)
-        ttk.Label(lbl_user_frame, text="Your Share Value", font=("Helvetica", 9, "bold")).pack(anchor=tk.W)
-        self.user_share_label = ttk.Label(lbl_user_frame, text="Fetching...", font=("Helvetica", 11), foreground="blue")
+        ttk.Label(lbl_user_frame, text="Grand Total (USD)", font=("Helvetica", 9, "bold")).pack(anchor=tk.W)
+        self.user_share_label = ttk.Label(lbl_user_frame, text="Wait for Scan...", font=("Helvetica", 11), foreground="blue")
         self.user_share_label.pack(anchor=tk.W)
         
-        # Start TVL Fetch
-        threading.Thread(target=self.fetch_xaut_tvl, daemon=True).start()
+        # Start Gold Price Fetch
+        threading.Thread(target=self.fetch_gold_price, daemon=True).start()
 
         # --- Tabs ---
         self.notebook = ttk.Notebook(root)
@@ -102,6 +104,11 @@ class PortfolioGUI:
         self.notebook.add(self.btwty_eos_frame, text="BTWTY.EOS Portfolio")
         self.btwty_eos_tree = self.create_treeview(self.btwty_eos_frame)
         
+        # BTS Tab
+        self.bts_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.bts_frame, text="BTS Portfolio")
+        self.bts_tree = self.create_treeview(self.bts_frame)
+
         # --- Footer ---
         footer_frame = ttk.Frame(root, padding="10")
         footer_frame.pack(fill=tk.X)
@@ -114,6 +121,9 @@ class PortfolioGUI:
 
         self.btwty_eos_total_label = ttk.Label(footer_frame, text="BTWTY.EOS Total: $0.00", font=("Helvetica", 10))
         self.btwty_eos_total_label.pack(anchor=tk.W)
+        
+        self.bts_total_label = ttk.Label(footer_frame, text="BTS Total: $0.00", font=("Helvetica", 10))
+        self.bts_total_label.pack(anchor=tk.W)
         
         ttk.Separator(footer_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
         
@@ -134,58 +144,91 @@ class PortfolioGUI:
         canvas.create_oval(15, 20, 25, 30, fill="gold", outline="goldenrod")
         canvas.create_oval(25, 20, 35, 30, fill="gold", outline="goldenrod")
 
-    def fetch_xaut_tvl(self):
+    def fetch_gold_price(self):
         try:
             pool_id = "1.19.473" # XAUT/USDT
             pool_data = get_pool_data(pool_id)
             
             if not pool_data:
-                 self.update_labels_safe("Error", "Error")
+                 self.root.after(0, lambda: self.update_gold_price_label("Error"))
                  return
 
-            # 1. Calculate Pool TVL
+            # Calculate Gold Price (USD per XAUT)
             id_usdt = "1.3.5589"
+            id_xaut = "1.3.6139" # From our check
+            
             balance_usdt = Decimal(0)
+            balance_xaut = Decimal(0)
+            
+            prec_usdt = 6
+            prec_xaut = 6
+            
             if pool_data.get("asset_a") == id_usdt:
                 balance_usdt = Decimal(pool_data["balance_a"])
+                balance_xaut = Decimal(pool_data["balance_b"])
             elif pool_data.get("asset_b") == id_usdt:
                 balance_usdt = Decimal(pool_data["balance_b"])
+                balance_xaut = Decimal(pool_data["balance_a"])
             
-            usd_val = balance_usdt / Decimal(10**6)
-            pool_tvl = usd_val * 2
+            real_usdt = balance_usdt / Decimal(10**prec_usdt)
+            real_xaut = balance_xaut / Decimal(10**prec_xaut)
             
-            # 2. Calculate User Share
-            settings = self.load_settings()
-            accounts = settings.get("accounts", [])
+            price = Decimal(0)
+            if real_xaut > 0:
+                price = real_usdt / real_xaut
             
-            user_share_val = Decimal(0)
-            
-            if accounts:
-                share_asset_id = pool_data.get("share_asset")
-                # Get Supply
-                supply_val, supply_prec = get_asset_supply(share_asset_id)
-                
-                if supply_val > 0:
-                    user_balance_total = Decimal(0)
-                    for acct in accounts:
-                        raw = get_account_balance(acct, share_asset_id)
-                        if raw:
-                            user_balance_total += Decimal(raw)
-                    
-                    user_balance_human = user_balance_total / (Decimal(10) ** supply_prec)
-                    
-                    share_pct = user_balance_human / supply_val
-                    user_share_val = pool_tvl * share_pct
-
-            self.root.after(0, lambda: self.update_tvl_labels(f"${pool_tvl:,.2f}", f"${user_share_val:,.2f}"))
+            self.gold_price = price
+            self.root.after(0, lambda: self.update_gold_price_label(f"${price:,.2f}"))
 
         except Exception as e:
-            print(f"TVL Error: {e}")
-            self.root.after(0, lambda: self.update_tvl_labels("Error", "Error"))
+            print(f"Gold Price Error: {e}")
+            self.root.after(0, lambda: self.update_gold_price_label("Error"))
 
-    def update_tvl_labels(self, pool_text, user_text):
-        self.tvl_value_label.config(text=pool_text)
-        self.user_share_label.config(text=user_text)
+    def update_gold_price_label(self, price_text):
+        self.tvl_value_label.config(text=price_text)
+
+    def draw_gold_stacks(self, canvas, ounces):
+        canvas.delete("all")
+        
+        # Limit ounces to avoid crash if something is wrong
+        count = int(ounces)
+        if count <= 0:
+            return
+        if count > 500: # Cap visual at 500
+            count = 500
+            
+        # Draw "Gold Bars" or "Coins"
+        # Let's do small gold rectangles
+        
+        bar_w = 10
+        bar_h = 5
+        spacing_x = 2
+        spacing_y = 2
+        
+        # Grid parameters
+        start_x = 5
+        start_y = 75 # Start from bottom? No, canvas height is 80.
+        
+        # Let's stack them from bottom left
+        # We have height 80. 
+        # Max bars vertically = 80 / (5+2) = ~11
+        
+        rows = 10
+        cols = 0
+        
+        for i in range(count):
+            col = i // rows
+            row = i % rows
+            
+            x1 = start_x + (col * (bar_w + spacing_x))
+            y1 = 70 - (row * (bar_h + spacing_y)) # 70 is base y
+            
+            x2 = x1 + bar_w
+            y2 = y1 + bar_h
+            
+            # Simple Gold Bar
+            canvas.create_rectangle(x1, y1, x2, y2, fill="gold", outline="#B8860B")
+
 
     def load_settings(self):
         settings_file = "user_settings.json"
@@ -312,6 +355,8 @@ class PortfolioGUI:
             self.growth_tree.delete(row)
         for row in self.btwty_eos_tree.get_children():
             self.btwty_eos_tree.delete(row)
+        for row in self.bts_tree.get_children():
+            self.bts_tree.delete(row)
             
         thread = threading.Thread(target=self.run_valuation)
         thread.daemon = True
@@ -352,6 +397,15 @@ class PortfolioGUI:
             usd_total = Decimal(0)
             growth_total = Decimal(0)
             btwty_eos_total = Decimal(0)
+            bts_total = Decimal(0)
+
+            # Fetch BTS Price
+            try:
+                with open("config_bts.json", "r") as f:
+                    bts_config = json.load(f)
+                    prices["BTS"] = valuation.get_bts_price_usd(bts_config)
+            except Exception as e:
+                print(f"BTS Price error: {e}")
             
             # 2. Process Portfolios
             for p in valuation.PORTFOLIOS:
@@ -370,9 +424,12 @@ class PortfolioGUI:
                     elif p["name"] == "BTWTY.EOS":
                         btwty_eos_total = total_val
                         self.update_tree(self.btwty_eos_tree, details)
+                    elif p["name"] == "BTS Portfolio":
+                        bts_total = total_val
+                        self.update_tree(self.bts_tree, details)
             
             # 3. Update UI Labels
-            self.root.after(0, lambda: self.update_labels(usd_total, growth_total, btwty_eos_total, grand_total))
+            self.root.after(0, lambda: self.update_labels(usd_total, growth_total, btwty_eos_total, bts_total, grand_total))
             self.root.after(0, lambda: self.finish_refresh("Data Updated Successfully"))
             
         except Exception as e:
@@ -392,11 +449,22 @@ class PortfolioGUI:
                 ))
         self.root.after(0, _update)
 
-    def update_labels(self, usd, growth, btwty_eos, grand):
+    def update_labels(self, usd, growth, btwty_eos, bts, grand):
         self.usd_total_label.config(text=f"USD Total: ${usd:,.2f}")
         self.growth_total_label.config(text=f"TWENTIX Total: ${growth:,.2f}")
         self.btwty_eos_total_label.config(text=f"BTWTY.EOS Total: ${btwty_eos:,.2f}")
+        self.bts_total_label.config(text=f"BTS Total: ${bts:,.2f}")
         self.grand_total_label.config(text=f"GRAND TOTAL: ${grand:,.2f}")
+        
+        # Update Gold Viz Label
+        self.user_share_label.config(text=f"${grand:,.2f}")
+        
+        # Calculate Ounces
+        ounces = 0
+        if self.gold_price > 0:
+            ounces = grand / self.gold_price
+            
+        self.draw_gold_stacks(self.gold_canvas, ounces)
 
     def finish_refresh(self, message):
         self.status_var.set(message)
