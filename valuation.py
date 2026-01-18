@@ -9,12 +9,36 @@ from pool_data_handler import get_pool_data, get_account_balance, get_all_accoun
 # Set precision
 getcontext().prec = 28
 
+# Enable ANSI escape codes on Windows
+if os.name == 'nt':
+    os.system('color')
+
+class Style:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+
+def fmt_money(value):
+    """Format decimal/float as money string with green color."""
+    return f"{Style.GREEN}${value:,.2f}{Style.RESET}"
+
+def fmt_header(text):
+    return f"{Style.CYAN}{Style.BOLD}{text}{Style.RESET}"
+
 # Configuration
 PORTFOLIOS = [
     {"name": "USD", "config": "config_core.json", "output": "capital_history_usd.csv"},
     {"name": "TWENTIX", "config": "config_growth.json", "output": "capital_history_twentix.csv"},
     {"name": "BTWTY", "config": "config_btwty.json", "output": "capital_history_btwty.csv"},
     {"name": "BTWTY.EOS", "config": "config_btwty_eos.json", "output": "capital_history_btwty_eos.csv"},
+    {"name": "Liquid", "config": "config_liquid.json", "output": "capital_history_liquid.csv"},
+    {"name": "Staking", "config": "config_staking.json", "output": "capital_history_staking.csv"},
     {"name": "USD^30D", "config": "config_usd_30d.json", "output": "capital_history_usd_30d.csv"},
     {"name": "BTS Portfolio", "config": "config_bts.json", "output": "capital_history_bts.csv"}
 ]
@@ -389,7 +413,7 @@ def process_credit_portfolio(portfolio, config, accounts, prices=None):
     output_file = portfolio["output"]
     credit_offers = config.get("credit_offers", [])
     
-    print(f"--- Processing Credit Offers for {name} ---")
+    print(fmt_header(f"--- Processing Credit Offers for {name} ---"))
     
     if not credit_offers:
         print("  No credit offers configured.")
@@ -437,45 +461,178 @@ def process_credit_portfolio(portfolio, config, accounts, prices=None):
         owner = obj.get("owner_account")
         is_owned = owner in accounts
         
-        display_val = usd_value
+        # display_val = usd_value
         user_val = usd_value if is_owned else Decimal(0)
-        
-        print(f"{label:15} | TVL: ${display_val:,.2f} | Owner: {owner} | Included: {is_owned}")
         
         valuations.append({
             "pool": label, # Reusing 'pool' key for CSV consistency
             "share_percent": 100.0 if is_owned else 0.0,
-            "value_usd": float(user_val)
+            "value_usd": float(user_val),
+            "raw_tvl_usd": float(usd_value),
+            "owner": owner,
+            "is_owned": is_owned
         })
         
         total_tvl += user_val
+
+    # Sort valuations by value_usd descending
+    valuations.sort(key=lambda x: x["value_usd"], reverse=True)
+
+    # Print sorted valuations
+    for v in valuations:
+        val_str = fmt_money(v['raw_tvl_usd'])
+        print(f"{v['pool']:15} | TVL: {val_str:20} | Owner: {v['owner']} | Included: {v['is_owned']}")
         
-    print("-" * 60)
-    print(f"{name.upper()} USER VALUE: ${total_tvl:,.2f}")
-    print("-" * 60)
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
+    print(f"{name.upper()} USER VALUE: {fmt_money(total_tvl)}")
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
     
-    # Save to CSV
-    # Reusing ensure_csv_headers - works the same, just different labels
-    all_labels = [o.get("label", o["id"]) for o in credit_offers]
-    final_headers = ensure_csv_headers(output_file, all_labels)
-    
-    row_data = {
-        "Timestamp": datetime.datetime.now().isoformat(),
-        "Accounts": ";".join(accounts) if accounts else "None",
-        "Total Value USD": f"{total_tvl:.2f}"
-    }
-    
-    for val in valuations:
-        row_data[val["pool"]] = f"{val['value_usd']:.2f}"
-        
-    with open(output_file, 'a', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=final_headers)
-        if os.stat(output_file).st_size == 0:
-            writer.writeheader()
-        writer.writerow(row_data)
-        print(f"Data saved to {output_file}")
-        
     return total_tvl, valuations
+
+def process_csv_portfolio(portfolio, config, accounts, prices):
+    """Process a portfolio defined by a CSV file of balances."""
+    name = portfolio["name"]
+    output_file = portfolio["output"]
+    csv_file = config.get("csv_file")
+    
+    print(fmt_header(f"--- Processing CSV Balances for {name} ---"))
+    
+    if not csv_file or not os.path.exists(csv_file):
+        print(f"  CSV file not found: {csv_file}")
+        return Decimal(0), []
+        
+    total_val_usd = Decimal(0)
+    valuations = []
+    
+    try:
+        with open(csv_file, 'r', newline='') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                acct_id = row.get("Account ID", "").strip()
+                
+                # Only process if account is in our tracked list
+                if acct_id not in accounts:
+                    continue
+                    
+                symbol = row.get("Symbol", "").strip()
+                balance_str = row.get("Balance", "0").strip()
+                try:
+                    balance = Decimal(balance_str)
+                except:
+                    print(f"  Invalid balance for {acct_id}: {balance_str}")
+                    continue
+                    
+                # Determine Price
+                price = Decimal(0)
+                if symbol == "BTS" and prices.get("BTS"):
+                    price = prices["BTS"]
+                elif symbol in prices and prices[symbol]:
+                     price = prices[symbol]
+                else:
+                    # Fallback or Todo: Handle other assets
+                    print(f"  No price found for {symbol}")
+                
+                usd_value = balance * price
+                
+                # Create a label for the UI
+                label = f"{symbol} (Staking)"
+                
+                valuations.append({
+                    "pool": label, # Reusing 'pool' for UI column compatibility
+                    "share_percent": 100.0,
+                    "value_usd": float(usd_value),
+                    "balance": float(balance),
+                    "price": float(price)
+                })
+                
+                total_val_usd += usd_value
+                
+    except Exception as e:
+        print(f"  Error reading CSV: {e}")
+        return Decimal(0), []
+
+    # Sort valuations by value_usd descending
+    valuations.sort(key=lambda x: x["value_usd"], reverse=True)
+
+    # Print sorted valuations
+    for v in valuations:
+        val_str = fmt_money(v['value_usd'])
+        print(f"{v['pool']:15} | Balance: {v['balance']:,.2f} | Price: ${v['price']:.6f} | Value: {val_str}")
+
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
+    print(f"{name.upper()} VALUE: {fmt_money(total_val_usd)}")
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
+    
+    return total_val_usd, valuations
+
+def process_wallet_assets_portfolio(portfolio, config, accounts, prices, user_balances):
+    """Process a portfolio of liquid wallet assets."""
+    name = portfolio["name"]
+    output_file = portfolio["output"]
+    assets = config.get("assets", [])
+    
+    print(fmt_header(f"--- Processing Liquid Assets for {name} ---"))
+    
+    if not assets:
+        print("  No assets configured.")
+        return Decimal(0), []
+        
+    total_val_usd = Decimal(0)
+    valuations = []
+    
+    # Iterate over configured assets
+    for asset_conf in assets:
+        asset_id = asset_conf["id"]
+        symbol = asset_conf["symbol"]
+        precision = asset_conf["precision"]
+        
+        # Determine Price
+        price = Decimal(0)
+        
+        if "fixed_price" in asset_conf:
+             price = Decimal(asset_conf["fixed_price"])
+        elif "price_reference" in asset_conf:
+             ref = asset_conf["price_reference"]
+             if ref in prices and prices[ref]:
+                 price = prices[ref]
+        
+        # Calculate Balance across all accounts
+        total_balance = Decimal(0)
+        
+        for acct_id in accounts:
+            if acct_id in user_balances:
+                raw_bal = user_balances[acct_id].get(asset_id, "0")
+                total_balance += Decimal(raw_bal) / (Decimal(10) ** precision)
+                
+        usd_value = total_balance * price
+        
+        # Add to valuations if we have a definition, even if value is 0, to track headers?
+        # Better to only add if we have something to report or at least keep consistency.
+        # existing logic usually adds row data based on keys.
+        
+        if total_balance > -1: # Always show for now
+            valuations.append({
+                "pool": symbol, 
+                "share_percent": 100.0,
+                "value_usd": float(usd_value),
+                "balance": float(total_balance),
+                "price": float(price)
+            })
+            total_val_usd += usd_value
+
+    # Sort valuations by value_usd descending
+    valuations.sort(key=lambda x: x["value_usd"], reverse=True)
+
+    # Print sorted valuations
+    for v in valuations:
+        val_str = fmt_money(v['value_usd'])
+        print(f"{v['pool']:15} | Balance: {v['balance']:,.4f} | Price: ${v['price']:.6f} | Value: {val_str}")
+
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
+    print(f"{name.upper()} VALUE: {fmt_money(total_val_usd)}")
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
+    
+    return total_val_usd, valuations
 
 def process_portfolio(portfolio, prices, accounts, user_balances):
     """Process a single portfolio configuration"""
@@ -489,7 +646,7 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
     btwty_price = prices.get("BTWTY")
     bts_price = prices.get("BTS")
 
-    print(f"\n=== Processing Portfolio: {name} ===")
+    print(fmt_header(f"\n=== Processing Portfolio: {name} ==="))
     
     try:
         with open(config_file, 'r') as f:
@@ -499,6 +656,12 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
         return
 
     # Dispatcher for Portfolio Type
+    if config.get("type") == "csv_balances":
+        return process_csv_portfolio(portfolio, config, accounts, prices)
+
+    if config.get("type") == "wallet_assets":
+        return process_wallet_assets_portfolio(portfolio, config, accounts, prices, user_balances)
+
     if "credit_offers" in config:
         return process_credit_portfolio(portfolio, config, accounts, prices)
 
@@ -520,7 +683,7 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
     total_portfolio_usd = Decimal(0)
     pool_valuations = []
 
-    print(f"--- Processing Pools for {name} ---")
+    print(fmt_header(f"--- Processing Pools for {name} ---"))
     
     for pool_conf in pools:
         pool_id = pool_conf["id"]
@@ -625,63 +788,36 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
         share_ratio = user_balance_total / total_supply
         user_value_usd = pool_tvl_usd * share_ratio
         
-        print(f"{label:15} | Share: {share_ratio*100:6.4f}% | Pool TVL: ${pool_tvl_usd:12.2f} | Your Value: ${user_value_usd:10.2f}")
-        
+        # Store for sorting
         pool_valuations.append({
             "pool": label,
             "share_percent": float(share_ratio * 100),
-            "value_usd": float(user_value_usd)
+            "value_usd": float(user_value_usd),
+            "pool_tvl_usd": float(pool_tvl_usd)
         })
         
         total_portfolio_usd += user_value_usd
 
-    print("-" * 60)
-    print(f"{name.upper()} PORTFOLIO VALUE: ${total_portfolio_usd:,.2f}")
-    print("-" * 60)
+    # Sort by value_usd descending
+    pool_valuations.sort(key=lambda x: x["value_usd"], reverse=True)
+
+    # Print sorted
+    for v in pool_valuations:
+        tvl_str = fmt_money(v['pool_tvl_usd'])
+        val_str = fmt_money(v['value_usd'])
+        print(f"{v['pool']:15} | Share: {v['share_percent']:6.4f}% | Pool TVL: {tvl_str:20} | Your Value: {val_str}")
+
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
+    print(f"{name.upper()} PORTFOLIO VALUE: {fmt_money(total_portfolio_usd)}")
+    print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
     
-    # Save to CSV
-    # Collect all possible pool labels from config to ensure full coverage
-    all_pool_labels = [p["label"] for p in pools]
-    
-    final_headers = ensure_csv_headers(output_file, all_pool_labels)
-    
-    # Prepare row data
-    row_data = {
-        "Timestamp": datetime.datetime.now().isoformat(),
-        "Accounts": ";".join(accounts),
-        "Total Value USD": f"{total_portfolio_usd:.2f}"
-    }
-    
-    for p_val in pool_valuations:
-        p_label = p_val["pool"]
-        p_val_usd = p_val['value_usd']
-        
-        if p_label in row_data:
-            try:
-                current_val = float(row_data[p_label])
-                row_data[p_label] = f"{current_val + p_val_usd:.2f}"
-            except ValueError:
-                row_data[p_label] = f"{p_val_usd:.2f}"
-        else:
-            row_data[p_label] = f"{p_val_usd:.2f}"
-    
-    with open(output_file, 'a', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=final_headers)
-        
-        # Header if new file (or if we just created it but it's empty)
-        if os.stat(output_file).st_size == 0:
-            writer.writeheader()
-            
-        writer.writerow(row_data)
-        print(f"Data saved to {output_file}")
-        
     return total_portfolio_usd, pool_valuations
 
 def main():
     settings = load_user_settings()
     accounts = settings.get("accounts", [])
     
-    print(f"Starting Valuation Model at {datetime.datetime.now()}")
+    print(fmt_header(f"Starting Valuation Model at {datetime.datetime.now()}"))
     print(f"Tracking Accounts: {', '.join(accounts)}")
     
     if not accounts:
@@ -690,7 +826,7 @@ def main():
 
     # --- OPTIMIZATION START ---
     # Fetch all account balances once
-    print("--- Fetching All Account Balances (Batch) ---")
+    print(fmt_header("--- Fetching All Account Balances (Batch) ---"))
     user_balances = {}
     for acct_id in accounts:
         print(f"  Fetching balances for {acct_id}...")
@@ -699,7 +835,7 @@ def main():
 
     # Pre-fetch price if possible to ensure consistency across portfolios
     # We'll peek at the Core config for this
-    print("\n--- Establishing Reference Price ---")
+    print(fmt_header("\n--- Establishing Reference Price ---"))
     
     prices = {"TWENTIX": None, "BTWTY.EOS": None, "BTWTY": None}
     
@@ -736,9 +872,9 @@ def main():
         if val:
             grand_total += val
             
-    print("\n" + "=" * 60)
-    print(f"GRAND TOTAL (ALL PORTFOLIOS): ${grand_total:,.2f}")
-    print("=" * 60)
+    print("\n" + f"{Style.BOLD}{Style.CYAN}" + "=" * 60 + f"{Style.RESET}")
+    print(f"{Style.BOLD}GRAND TOTAL (ALL PORTFOLIOS): {Style.GREEN}${grand_total:,.2f}{Style.RESET}")
+    print(f"{Style.BOLD}{Style.CYAN}" + "=" * 60 + f"{Style.RESET}")
 
     # Save Grand Total to CSV
     total_history_file = "capital_history.csv"

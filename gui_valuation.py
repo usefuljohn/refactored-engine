@@ -12,7 +12,7 @@ class PortfolioGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("BitShares Portfolio Valuation")
-        self.root.geometry("800x650") # Slightly taller
+        self.root.geometry("900x700") # Increased size for new tabs
         
         self.gold_price = Decimal(0)
 
@@ -109,26 +109,55 @@ class PortfolioGUI:
         self.notebook.add(self.bts_frame, text="BTS Portfolio")
         self.bts_tree = self.create_treeview(self.bts_frame)
 
+        # Liquid Tab
+        self.liquid_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.liquid_frame, text="Liquid Portfolio")
+        self.liquid_tree = self.create_asset_treeview(self.liquid_frame)
+
+        # Staking Tab
+        self.staking_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.staking_frame, text="Staking Portfolio")
+        self.staking_tree = self.create_asset_treeview(self.staking_frame)
+
+        # USD^30D Tab
+        self.usd_30d_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.usd_30d_frame, text="USD^30D Portfolio")
+        self.usd_30d_tree = self.create_offer_treeview(self.usd_30d_frame)
+
         # --- Footer ---
         footer_frame = ttk.Frame(root, padding="10")
         footer_frame.pack(fill=tk.X)
         
+        # Configure Grid for labels to organize them better
+        footer_frame.columnconfigure(0, weight=1)
+        footer_frame.columnconfigure(1, weight=1)
+        footer_frame.columnconfigure(2, weight=1)
+
         self.usd_total_label = ttk.Label(footer_frame, text="USD Total: $0.00", font=("Helvetica", 10))
-        self.usd_total_label.pack(anchor=tk.W)
+        self.usd_total_label.grid(row=0, column=0, sticky=tk.W)
         
         self.growth_total_label = ttk.Label(footer_frame, text="TWENTIX Total: $0.00", font=("Helvetica", 10))
-        self.growth_total_label.pack(anchor=tk.W)
+        self.growth_total_label.grid(row=0, column=1, sticky=tk.W)
 
         self.btwty_eos_total_label = ttk.Label(footer_frame, text="BTWTY.EOS Total: $0.00", font=("Helvetica", 10))
-        self.btwty_eos_total_label.pack(anchor=tk.W)
+        self.btwty_eos_total_label.grid(row=0, column=2, sticky=tk.W)
         
         self.bts_total_label = ttk.Label(footer_frame, text="BTS Total: $0.00", font=("Helvetica", 10))
-        self.bts_total_label.pack(anchor=tk.W)
+        self.bts_total_label.grid(row=1, column=0, sticky=tk.W)
+
+        self.liquid_total_label = ttk.Label(footer_frame, text="Liquid Total: $0.00", font=("Helvetica", 10))
+        self.liquid_total_label.grid(row=1, column=1, sticky=tk.W)
+
+        self.staking_total_label = ttk.Label(footer_frame, text="Staking Total: $0.00", font=("Helvetica", 10))
+        self.staking_total_label.grid(row=1, column=2, sticky=tk.W)
+
+        self.usd_30d_total_label = ttk.Label(footer_frame, text="USD^30D Total: $0.00", font=("Helvetica", 10))
+        self.usd_30d_total_label.grid(row=2, column=0, sticky=tk.W)
         
-        ttk.Separator(footer_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
+        ttk.Separator(footer_frame, orient=tk.HORIZONTAL).grid(row=3, column=0, columnspan=3, sticky="ew", pady=5)
         
         self.grand_total_label = ttk.Label(footer_frame, text="GRAND TOTAL: $0.00", font=("Helvetica", 14, "bold"))
-        self.grand_total_label.pack(anchor=tk.E)
+        self.grand_total_label.grid(row=4, column=0, columnspan=3, sticky=tk.E)
         
         # Status Bar
         self.status_var = tk.StringVar(value="Ready")
@@ -303,6 +332,7 @@ class PortfolioGUI:
              self.start_refresh()
 
     def create_treeview(self, parent):
+        """Standard Tree for Pools"""
         cols = ("Pool", "Share %", "Pool TVL", "Your Value")
         tree = ttk.Treeview(parent, columns=cols, show='headings')
         
@@ -323,12 +353,56 @@ class PortfolioGUI:
         
         return tree
 
+    def create_asset_treeview(self, parent):
+        """Tree for Liquid Assets / Staking (Balance, Price)"""
+        cols = ("Asset", "Balance", "Price", "Value")
+        tree = ttk.Treeview(parent, columns=cols, show='headings')
+        
+        for col in cols:
+            tree.heading(col, text=col, command=lambda _col=col: self.treeview_sort_column(tree, _col, False))
+            
+        tree.column("Asset", width=150)
+        tree.column("Balance", width=150, anchor=tk.E)
+        tree.column("Price", width=150, anchor=tk.E)
+        tree.column("Value", width=150, anchor=tk.E)
+        
+        scrollbar = ttk.Scrollbar(parent, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscroll=scrollbar.set)
+        
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        return tree
+
+    def create_offer_treeview(self, parent):
+        """Tree for Credit Offers (TVL, Status)"""
+        cols = ("Offer", "TVL (Total)", "Owned", "Value")
+        tree = ttk.Treeview(parent, columns=cols, show='headings')
+        
+        for col in cols:
+            tree.heading(col, text=col, command=lambda _col=col: self.treeview_sort_column(tree, _col, False))
+            
+        tree.column("Offer", width=200)
+        tree.column("TVL (Total)", width=150, anchor=tk.E)
+        tree.column("Owned", width=100, anchor=tk.CENTER)
+        tree.column("Value", width=150, anchor=tk.E)
+        
+        scrollbar = ttk.Scrollbar(parent, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscroll=scrollbar.set)
+        
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        return tree
+
     def treeview_sort_column(self, tv, col, reverse):
         l = [(tv.set(k, col), k) for k in tv.get_children('')]
         
         try:
             # Clean data for sorting (remove $, %, ,)
             def clean_val(val):
+                if val == "Yes": return 1.0
+                if val == "No": return 0.0
                 v = val.replace('$', '').replace('%', '').replace(',', '').strip()
                 return float(v) if v else 0.0
             
@@ -349,14 +423,10 @@ class PortfolioGUI:
         self.status_var.set("Fetching data from BitShares blockchain...")
         
         # Clear existing data
-        for row in self.usd_tree.get_children():
-            self.usd_tree.delete(row)
-        for row in self.growth_tree.get_children():
-            self.growth_tree.delete(row)
-        for row in self.btwty_eos_tree.get_children():
-            self.btwty_eos_tree.delete(row)
-        for row in self.bts_tree.get_children():
-            self.bts_tree.delete(row)
+        for tree in [self.usd_tree, self.growth_tree, self.btwty_eos_tree, self.bts_tree, 
+                     self.liquid_tree, self.staking_tree, self.usd_30d_tree]:
+            for row in tree.get_children():
+                tree.delete(row)
             
         thread = threading.Thread(target=self.run_valuation)
         thread.daemon = True
@@ -398,6 +468,9 @@ class PortfolioGUI:
             growth_total = Decimal(0)
             btwty_eos_total = Decimal(0)
             bts_total = Decimal(0)
+            liquid_total = Decimal(0)
+            staking_total = Decimal(0)
+            usd_30d_total = Decimal(0)
 
             # Fetch BTS Price
             try:
@@ -412,48 +485,87 @@ class PortfolioGUI:
                 # p is {"name": "USD", ...}
                 total_val, details = valuation.process_portfolio(p, prices, accounts, user_balances)
                 
-                if total_val:
+                if total_val is not None:
                     grand_total += total_val
                     
                     if p["name"] == "USD":
                         usd_total = total_val
-                        self.update_tree(self.usd_tree, details)
+                        self.update_tree_generic(self.usd_tree, details, "standard")
                     elif p["name"] == "TWENTIX":
                         growth_total = total_val
-                        self.update_tree(self.growth_tree, details)
+                        self.update_tree_generic(self.growth_tree, details, "standard")
                     elif p["name"] == "BTWTY.EOS":
                         btwty_eos_total = total_val
-                        self.update_tree(self.btwty_eos_tree, details)
+                        self.update_tree_generic(self.btwty_eos_tree, details, "standard")
                     elif p["name"] == "BTS Portfolio":
                         bts_total = total_val
-                        self.update_tree(self.bts_tree, details)
+                        self.update_tree_generic(self.bts_tree, details, "standard")
+                    elif p["name"] == "Liquid":
+                        liquid_total = total_val
+                        self.update_tree_generic(self.liquid_tree, details, "asset")
+                    elif p["name"] == "Staking":
+                        staking_total = total_val
+                        self.update_tree_generic(self.staking_tree, details, "asset")
+                    elif p["name"] == "USD^30D":
+                        usd_30d_total = total_val
+                        self.update_tree_generic(self.usd_30d_tree, details, "offer")
             
             # 3. Update UI Labels
-            self.root.after(0, lambda: self.update_labels(usd_total, growth_total, btwty_eos_total, bts_total, grand_total))
+            self.root.after(0, lambda: self.update_labels(
+                usd_total, growth_total, btwty_eos_total, bts_total, liquid_total, staking_total, usd_30d_total, grand_total
+            ))
             self.root.after(0, lambda: self.finish_refresh("Data Updated Successfully"))
             
         except Exception as e:
             msg = f"Error: {str(e)}"
             self.root.after(0, lambda: self.finish_refresh(msg))
 
-    def update_tree(self, tree, data):
+    def update_tree_generic(self, tree, data, mode):
         # Schedule the UI update on the main thread
         def _update():
             for item in data:
-                tree.insert("", tk.END, values=(
-                    item["pool"],
-                    f"{item['share_percent']:.4f}%",
-                    f"${Decimal(item['value_usd']) / (Decimal(item['share_percent'])/100) if item['share_percent'] > 0 else 0:,.2f}", # Reverse calc TVL or pass it? 
-                    # Actually details doesn't pass TVL directly, let's just use the value
-                    f"${item['value_usd']:,.2f}"
-                ))
+                if mode == "standard":
+                    # Pool, Share, TVL, Value
+                    tree.insert("", tk.END, values=(
+                        item["pool"],
+                        f"{item['share_percent']:.4f}%",
+                        f"${Decimal(item['value_usd']) / (Decimal(item['share_percent'])/100) if item['share_percent'] > 0 else 0:,.2f}",
+                        f"${item['value_usd']:,.2f}"
+                    ))
+                elif mode == "asset":
+                    # Asset, Balance, Price, Value
+                    # Ensure keys exist (they should from our update)
+                    bal = item.get("balance", 0)
+                    pr = item.get("price", 0)
+                    tree.insert("", tk.END, values=(
+                        item["pool"], # Asset Name
+                        f"{bal:,.4f}",
+                        f"${pr:,.6f}",
+                        f"${item['value_usd']:,.2f}"
+                    ))
+                elif mode == "offer":
+                    # Offer, TVL (Total), Owned, Value
+                    tvl = item.get("raw_tvl_usd", 0)
+                    owned = "Yes" if item['share_percent'] > 0 else "No"
+                    tree.insert("", tk.END, values=(
+                        item["pool"],
+                        f"${tvl:,.2f}",
+                        owned,
+                        f"${item['value_usd']:,.2f}"
+                    ))
+                    
         self.root.after(0, _update)
 
-    def update_labels(self, usd, growth, btwty_eos, bts, grand):
+    def update_labels(self, usd, growth, btwty_eos, bts, liquid, staking, usd_30d, grand):
         self.usd_total_label.config(text=f"USD Total: ${usd:,.2f}")
         self.growth_total_label.config(text=f"TWENTIX Total: ${growth:,.2f}")
         self.btwty_eos_total_label.config(text=f"BTWTY.EOS Total: ${btwty_eos:,.2f}")
         self.bts_total_label.config(text=f"BTS Total: ${bts:,.2f}")
+        
+        self.liquid_total_label.config(text=f"Liquid Total: ${liquid:,.2f}")
+        self.staking_total_label.config(text=f"Staking Total: ${staking:,.2f}")
+        self.usd_30d_total_label.config(text=f"USD^30D Total: ${usd_30d:,.2f}")
+        
         self.grand_total_label.config(text=f"GRAND TOTAL: ${grand:,.2f}")
         
         # Update Gold Viz Label

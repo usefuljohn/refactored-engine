@@ -1,0 +1,25 @@
+{
+    "type": "wallet_assets",
+    "name": "Liquid Portfolio",
+    "description": "Liquid assets with active balances",
+    "assets": [
+        {
+            "id": "1.3.2972",
+            "symbol": "DAODOLLAR",
+            "precision": 4,
+            "fixed_price": 1.0
+        },
+        {
+            "id": "1.3.3291",
+            "symbol": "TWENTIX",
+            "precision": 5,
+            "price_reference": "TWENTIX"
+        },
+        {
+            "id": "1.3.0",
+            "symbol": "BTS",
+            "precision": 5,
+            "price_reference": "BTS"
+        }
+    ]
+}
