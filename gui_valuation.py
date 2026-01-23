@@ -11,7 +11,7 @@ from pool_data_handler import resolve_account_name, get_all_account_balances, ge
 class PortfolioGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("BitShares Portfolio Valuation")
+        self.root.title("BitShares Portfolio Valuation v2")
         self.root.geometry("900x700") # Increased size for new tabs
         
         self.gold_price = Decimal(0)
@@ -27,10 +27,13 @@ class PortfolioGUI:
         # Mode Selection
         mode_frame = ttk.Frame(settings_frame)
         mode_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
-        ttk.Label(mode_frame, text="Mode:").pack(side=tk.LEFT)
+        
+        ttk.Label(mode_frame, text="VALUATION MODE:", font=("Helvetica", 10, "bold")).pack(side=tk.LEFT)
         self.mode_var = tk.StringVar(value="private")
-        ttk.Radiobutton(mode_frame, text="Private (User Portfolio)", variable=self.mode_var, value="private", command=self.toggle_mode).pack(side=tk.LEFT, padx=10)
-        ttk.Radiobutton(mode_frame, text="Public (Global Stats)", variable=self.mode_var, value="public", command=self.toggle_mode).pack(side=tk.LEFT, padx=10)
+        
+        # Use standard tk.Radiobutton for better visibility on Windows
+        tk.Radiobutton(mode_frame, text="Private (User Portfolio)", variable=self.mode_var, value="private", command=self.toggle_mode, font=("Helvetica", 10)).pack(side=tk.LEFT, padx=15)
+        tk.Radiobutton(mode_frame, text="Public (Global Stats)", variable=self.mode_var, value="public", command=self.toggle_mode, font=("Helvetica", 10)).pack(side=tk.LEFT, padx=15)
 
         # Account Entry
         self.account_frame = ttk.Frame(settings_frame)
