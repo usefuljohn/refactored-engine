@@ -407,7 +407,7 @@ def find_twentix_price_for_asset(target_asset_symbol, all_pools_config):
             
     return None
 
-def process_credit_portfolio(portfolio, config, accounts, prices=None):
+def process_credit_portfolio(portfolio, config, accounts, prices=None, mode="private"):
     """Process a credit offer portfolio (TVL tracking)"""
     name = portfolio["name"]
     output_file = portfolio["output"]
@@ -417,7 +417,7 @@ def process_credit_portfolio(portfolio, config, accounts, prices=None):
     
     if not credit_offers:
         print("  No credit offers configured.")
-        return Decimal(0), []
+        return Decimal(0), Decimal(0), []
         
     ids = [offer["id"] for offer in credit_offers]
     
@@ -427,9 +427,10 @@ def process_credit_portfolio(portfolio, config, accounts, prices=None):
     
     if not objects:
         print("  Failed to fetch credit offer objects.")
-        return Decimal(0), []
+        return Decimal(0), Decimal(0), []
         
-    total_tvl = Decimal(0)
+    total_user_tvl = Decimal(0)
+    total_global_tvl = Decimal(0)
     valuations = []
     
     # Create a map for easy lookup if order isn't guaranteed (though usually it is)
@@ -473,21 +474,27 @@ def process_credit_portfolio(portfolio, config, accounts, prices=None):
             "is_owned": is_owned
         })
         
-        total_tvl += user_val
+        total_user_tvl += user_val
+        total_global_tvl += usd_value
 
     # Sort valuations by value_usd descending
-    valuations.sort(key=lambda x: x["value_usd"], reverse=True)
+    valuations.sort(key=lambda x: x["raw_tvl_usd"], reverse=True)
 
     # Print sorted valuations
     for v in valuations:
         val_str = fmt_money(v['raw_tvl_usd'])
-        print(f"{v['pool']:15} | TVL: {val_str:20} | Owner: {v['owner']} | Included: {v['is_owned']}")
+        if mode == "private":
+            print(f"{v['pool']:15} | TVL: {val_str:20} | Owner: {v['owner']} | Included: {v['is_owned']}")
+        else:
+            print(f"{v['pool']:15} | Global TVL: {val_str}")
         
     print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
-    print(f"{name.upper()} USER VALUE: {fmt_money(total_tvl)}")
+    print(f"{name.upper()} GLOBAL TVL: {fmt_money(total_global_tvl)}")
+    if mode == "private":
+        print(f"{name.upper()} USER VALUE: {fmt_money(total_user_tvl)}")
     print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
     
-    return total_tvl, valuations
+    return total_user_tvl, total_global_tvl, valuations
 
 def process_csv_portfolio(portfolio, config, accounts, prices):
     """Process a portfolio defined by a CSV file of balances."""
@@ -499,7 +506,7 @@ def process_csv_portfolio(portfolio, config, accounts, prices):
     
     if not csv_file or not os.path.exists(csv_file):
         print(f"  CSV file not found: {csv_file}")
-        return Decimal(0), []
+        return Decimal(0), Decimal(0), []
         
     total_val_usd = Decimal(0)
     valuations = []
@@ -549,7 +556,7 @@ def process_csv_portfolio(portfolio, config, accounts, prices):
                 
     except Exception as e:
         print(f"  Error reading CSV: {e}")
-        return Decimal(0), []
+        return Decimal(0), Decimal(0), []
 
     # Sort valuations by value_usd descending
     valuations.sort(key=lambda x: x["value_usd"], reverse=True)
@@ -563,7 +570,7 @@ def process_csv_portfolio(portfolio, config, accounts, prices):
     print(f"{name.upper()} VALUE: {fmt_money(total_val_usd)}")
     print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
     
-    return total_val_usd, valuations
+    return total_val_usd, Decimal(0), valuations
 
 def process_wallet_assets_portfolio(portfolio, config, accounts, prices, user_balances):
     """Process a portfolio of liquid wallet assets."""
@@ -575,7 +582,7 @@ def process_wallet_assets_portfolio(portfolio, config, accounts, prices, user_ba
     
     if not assets:
         print("  No assets configured.")
-        return Decimal(0), []
+        return Decimal(0), Decimal(0), []
         
     total_val_usd = Decimal(0)
     valuations = []
@@ -632,9 +639,9 @@ def process_wallet_assets_portfolio(portfolio, config, accounts, prices, user_ba
     print(f"{name.upper()} VALUE: {fmt_money(total_val_usd)}")
     print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
     
-    return total_val_usd, valuations
+    return total_val_usd, Decimal(0), valuations
 
-def process_portfolio(portfolio, prices, accounts, user_balances):
+def process_portfolio(portfolio, prices, accounts, user_balances, mode="private"):
     """Process a single portfolio configuration"""
     name = portfolio["name"]
     config_file = portfolio["config"]
@@ -653,7 +660,7 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
             config = json.load(f)
     except Exception as e:
         print(f"Error loading {config_file}: {e}")
-        return
+        return Decimal(0), Decimal(0), []
 
     # Dispatcher for Portfolio Type
     if config.get("type") == "csv_balances":
@@ -663,12 +670,12 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
         return process_wallet_assets_portfolio(portfolio, config, accounts, prices, user_balances)
 
     if "credit_offers" in config:
-        return process_credit_portfolio(portfolio, config, accounts, prices)
+        return process_credit_portfolio(portfolio, config, accounts, prices, mode=mode)
 
     pools = config.get("pools", [])
     if not pools:
         print(f"  No pools configured for {name}.")
-        return Decimal(0)
+        return Decimal(0), Decimal(0), []
 
     # If global price isn't set, try to find it in this config (only if needed fallback)
     if not twentix_price:
@@ -681,6 +688,7 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
         # print(f"  Using Hardcoded Safety Price: ${twentix_price}")
 
     total_portfolio_usd = Decimal(0)
+    total_pool_tvl_usd = Decimal(0)
     pool_valuations = []
 
     print(fmt_header(f"--- Processing Pools for {name} ---"))
@@ -797,40 +805,59 @@ def process_portfolio(portfolio, prices, accounts, user_balances):
         })
         
         total_portfolio_usd += user_value_usd
+        total_pool_tvl_usd += pool_tvl_usd
 
-    # Sort by value_usd descending
-    pool_valuations.sort(key=lambda x: x["value_usd"], reverse=True)
+    # Sort by value_usd descending, or pool_tvl if user value is 0 (public mode)
+    if mode == "private":
+        pool_valuations.sort(key=lambda x: x["value_usd"], reverse=True)
+    else:
+        pool_valuations.sort(key=lambda x: x["pool_tvl_usd"], reverse=True)
 
     # Print sorted
     for v in pool_valuations:
         tvl_str = fmt_money(v['pool_tvl_usd'])
         val_str = fmt_money(v['value_usd'])
-        print(f"{v['pool']:15} | Share: {v['share_percent']:6.4f}% | Pool TVL: {tvl_str:20} | Your Value: {val_str}")
+        if mode == "private":
+            print(f"{v['pool']:15} | Share: {v['share_percent']:6.4f}% | Pool TVL: {tvl_str:20} | Your Value: {val_str}")
+        else:
+            print(f"{v['pool']:15} | Pool TVL: {tvl_str}")
 
     print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
-    print(f"{name.upper()} PORTFOLIO VALUE: {fmt_money(total_portfolio_usd)}")
+    print(f"{name.upper()} GLOBAL TVL:      {fmt_money(total_pool_tvl_usd)}")
+    if mode == "private":
+        print(f"{name.upper()} PORTFOLIO VALUE: {fmt_money(total_portfolio_usd)}")
     print(f"{Style.DIM}" + "-" * 60 + f"{Style.RESET}")
     
-    return total_portfolio_usd, pool_valuations
+    return total_portfolio_usd, total_pool_tvl_usd, pool_valuations
 
 def main():
-    settings = load_user_settings()
-    accounts = settings.get("accounts", [])
-    
-    print(fmt_header(f"Starting Valuation Model at {datetime.datetime.now()}"))
-    print(f"Tracking Accounts: {', '.join(accounts)}")
-    
-    if not accounts:
-        print("No accounts configured. Please check user_settings.json")
-        return
+    import argparse
+    parser = argparse.ArgumentParser(description="BitShares Portfolio Valuation")
+    parser.add_argument("--mode", choices=["private", "public"], default="private", help="Mode: private (user accounts) or public (global stats)")
+    args = parser.parse_args()
+
+    mode = args.mode
+    print(fmt_header(f"Starting Valuation Model ({mode.upper()} MODE) at {datetime.datetime.now()}"))
+
+    accounts = []
+    if mode == "private":
+        settings = load_user_settings()
+        accounts = settings.get("accounts", [])
+        print(f"Tracking Accounts: {', '.join(accounts)}")
+        if not accounts:
+            print("No accounts configured for private mode. Please check user_settings.json")
+            return
+    else:
+        print("Running in Public Mode. Ignoring user accounts.")
 
     # --- OPTIMIZATION START ---
-    # Fetch all account balances once
-    print(fmt_header("--- Fetching All Account Balances (Batch) ---"))
+    # Fetch all account balances once (only for private mode)
+    print(fmt_header("--- Fetching Balances ---"))
     user_balances = {}
-    for acct_id in accounts:
-        print(f"  Fetching balances for {acct_id}...")
-        user_balances[acct_id] = get_all_account_balances(acct_id)
+    if accounts:
+        for acct_id in accounts:
+            print(f"  Fetching balances for {acct_id}...")
+            user_balances[acct_id] = get_all_account_balances(acct_id)
     # --- OPTIMIZATION END ---
 
     # Pre-fetch price if possible to ensure consistency across portfolios
@@ -865,33 +892,56 @@ def main():
     except Exception as e:
         print(f"Error loading config_bts.json for prices: {e}")
         
-    grand_total = Decimal(0)
+    grand_total_user = Decimal(0)
+    grand_total_global = Decimal(0)
     
     for p in PORTFOLIOS:
-        val, _ = process_portfolio(p, prices, accounts, user_balances)
-        if val:
-            grand_total += val
+        val_user, val_global, _ = process_portfolio(p, prices, accounts, user_balances, mode=mode)
+        if val_user:
+            grand_total_user += val_user
+        if val_global:
+            grand_total_global += val_global
             
     print("\n" + f"{Style.BOLD}{Style.CYAN}" + "=" * 60 + f"{Style.RESET}")
-    print(f"{Style.BOLD}GRAND TOTAL (ALL PORTFOLIOS): {Style.GREEN}${grand_total:,.2f}{Style.RESET}")
+    if mode == "private":
+        print(f"{Style.BOLD}GRAND TOTAL (USER):   {Style.GREEN}${grand_total_user:,.2f}{Style.RESET}")
+    print(f"{Style.BOLD}GRAND TOTAL (GLOBAL): {Style.GREEN}${grand_total_global:,.2f}{Style.RESET}")
     print(f"{Style.BOLD}{Style.CYAN}" + "=" * 60 + f"{Style.RESET}")
 
-    # Save Grand Total to CSV
-    total_history_file = "capital_history.csv"
-    file_exists = os.path.isfile(total_history_file)
-    
-    with open(total_history_file, 'a', newline='') as f:
-        fieldnames = ["Timestamp", "Total Value USD"]
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+    # Save to CSV
+    if mode == "private":
+        total_history_file = "capital_history.csv"
+        file_exists = os.path.isfile(total_history_file)
         
-        if not file_exists:
-            writer.writeheader()
+        with open(total_history_file, 'a', newline='') as f:
+            fieldnames = ["Timestamp", "Total Value USD"]
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
             
-        writer.writerow({
-            "Timestamp": datetime.datetime.now().isoformat(),
-            "Total Value USD": f"{grand_total:.2f}"
-        })
-        print(f"Grand Total saved to {total_history_file}")
+            if not file_exists:
+                writer.writeheader()
+                
+            writer.writerow({
+                "Timestamp": datetime.datetime.now().isoformat(),
+                "Total Value USD": f"{grand_total_user:.2f}"
+            })
+            print(f"User Grand Total saved to {total_history_file}")
+            
+    else: # Public Mode
+        total_history_file = "capital_history_global.csv"
+        file_exists = os.path.isfile(total_history_file)
+        
+        with open(total_history_file, 'a', newline='') as f:
+            fieldnames = ["Timestamp", "Global TVL USD"]
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            
+            if not file_exists:
+                writer.writeheader()
+                
+            writer.writerow({
+                "Timestamp": datetime.datetime.now().isoformat(),
+                "Global TVL USD": f"{grand_total_global:.2f}"
+            })
+            print(f"Global Grand Total saved to {total_history_file}")
 
 if __name__ == "__main__":
     main()

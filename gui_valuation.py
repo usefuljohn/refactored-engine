@@ -21,21 +21,36 @@ class PortfolioGUI:
         style.theme_use('clam')
         
         # --- Settings Frame ---
-        settings_frame = ttk.LabelFrame(root, text="Account Configuration", padding="10")
+        settings_frame = ttk.LabelFrame(root, text="Configuration", padding="10")
         settings_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        ttk.Label(settings_frame, text="Account Names (comma separated):").pack(side=tk.LEFT)
+        # Mode Selection
+        mode_frame = ttk.Frame(settings_frame)
+        mode_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
+        ttk.Label(mode_frame, text="Mode:").pack(side=tk.LEFT)
+        self.mode_var = tk.StringVar(value="private")
+        ttk.Radiobutton(mode_frame, text="Private (User Portfolio)", variable=self.mode_var, value="private", command=self.toggle_mode).pack(side=tk.LEFT, padx=10)
+        ttk.Radiobutton(mode_frame, text="Public (Global Stats)", variable=self.mode_var, value="public", command=self.toggle_mode).pack(side=tk.LEFT, padx=10)
+
+        # Account Entry
+        self.account_frame = ttk.Frame(settings_frame)
+        self.account_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
         
-        self.account_entry = ttk.Entry(settings_frame)
+        ttk.Label(self.account_frame, text="Account Names:").pack(side=tk.LEFT)
+        
+        self.account_entry = ttk.Entry(self.account_frame)
         self.account_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         
-        self.save_btn = ttk.Button(settings_frame, text="Save & Scan", command=self.save_accounts)
+        self.save_btn = ttk.Button(self.account_frame, text="Save & Scan", command=self.save_accounts)
         self.save_btn.pack(side=tk.LEFT)
         
         # Load initial settings into Entry
         self.current_settings = self.load_settings()
         initial_names = ", ".join(self.current_settings.get("account_names", []))
         self.account_entry.insert(0, initial_names)
+        
+        # Trigger initial state
+        self.toggle_mode()
         
         # --- Header ---
         header_frame = ttk.Frame(root, padding="10")
@@ -258,6 +273,14 @@ class PortfolioGUI:
             # Simple Gold Bar
             canvas.create_rectangle(x1, y1, x2, y2, fill="gold", outline="#B8860B")
 
+    def toggle_mode(self):
+        mode = self.mode_var.get()
+        if mode == "public":
+            for child in self.account_frame.winfo_children():
+                child.configure(state=tk.DISABLED)
+        else:
+            for child in self.account_frame.winfo_children():
+                child.configure(state=tk.NORMAL)
 
     def load_settings(self):
         settings_file = "user_settings.json"
@@ -435,17 +458,21 @@ class PortfolioGUI:
     def run_valuation(self):
         try:
             # Re-use logic from valuation.py
+            mode = self.mode_var.get()
             
             # Get Accounts from settings
-            accounts = self.current_settings.get("accounts", [])
-            if not accounts:
-                 self.root.after(0, lambda: self.finish_refresh("No accounts configured."))
-                 return
-
-            # 0. Fetch Balances
+            accounts = []
+            if mode == "private":
+                accounts = self.current_settings.get("accounts", [])
+                if not accounts:
+                     self.root.after(0, lambda: self.finish_refresh("No accounts configured."))
+                     return
+            
+            # 0. Fetch Balances (only if private)
             user_balances = {}
-            for acct_id in accounts:
-                user_balances[acct_id] = get_all_account_balances(acct_id)
+            if mode == "private":
+                for acct_id in accounts:
+                    user_balances[acct_id] = get_all_account_balances(acct_id)
 
             # 1. Get Prices
             prices = {"TWENTIX": None, "BTWTY.EOS": None, "BTWTY": None}
@@ -483,38 +510,43 @@ class PortfolioGUI:
             # 2. Process Portfolios
             for p in valuation.PORTFOLIOS:
                 # p is {"name": "USD", ...}
-                total_val, details = valuation.process_portfolio(p, prices, accounts, user_balances)
+                user_val, global_val, details = valuation.process_portfolio(p, prices, accounts, user_balances)
                 
-                if total_val is not None:
-                    grand_total += total_val
+                # Determine which value to track based on mode
+                relevant_val = global_val if mode == "public" else user_val
+                
+                if relevant_val is not None:
+                    grand_total += relevant_val
                     
                     if p["name"] == "USD":
-                        usd_total = total_val
+                        usd_total = relevant_val
                         self.update_tree_generic(self.usd_tree, details, "standard")
                     elif p["name"] == "TWENTIX":
-                        growth_total = total_val
+                        growth_total = relevant_val
                         self.update_tree_generic(self.growth_tree, details, "standard")
                     elif p["name"] == "BTWTY.EOS":
-                        btwty_eos_total = total_val
+                        btwty_eos_total = relevant_val
                         self.update_tree_generic(self.btwty_eos_tree, details, "standard")
                     elif p["name"] == "BTS Portfolio":
-                        bts_total = total_val
+                        bts_total = relevant_val
                         self.update_tree_generic(self.bts_tree, details, "standard")
                     elif p["name"] == "Liquid":
-                        liquid_total = total_val
+                        liquid_total = relevant_val
                         self.update_tree_generic(self.liquid_tree, details, "asset")
                     elif p["name"] == "Staking":
-                        staking_total = total_val
+                        staking_total = relevant_val
                         self.update_tree_generic(self.staking_tree, details, "asset")
                     elif p["name"] == "USD^30D":
-                        usd_30d_total = total_val
+                        usd_30d_total = relevant_val
                         self.update_tree_generic(self.usd_30d_tree, details, "offer")
             
             # 3. Update UI Labels
             self.root.after(0, lambda: self.update_labels(
                 usd_total, growth_total, btwty_eos_total, bts_total, liquid_total, staking_total, usd_30d_total, grand_total
             ))
-            self.root.after(0, lambda: self.finish_refresh("Data Updated Successfully"))
+            
+            status_msg = "Data Updated (Public Mode)" if mode == "public" else "Data Updated (User Portfolio)"
+            self.root.after(0, lambda: self.finish_refresh(status_msg))
             
         except Exception as e:
             msg = f"Error: {str(e)}"

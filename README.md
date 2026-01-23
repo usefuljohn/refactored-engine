@@ -1,80 +1,125 @@
-# BitShares Portfolio Valuation Engine
+# BitShares Portfolio Valuation & Tracker
 
-A comprehensive Python-based valuation engine for the BitShares blockchain. This tool calculates the real-time USD value of complex portfolios, including Liquidity Pool (LP) positions, Credit Offers (Lending), Liquid Wallet Assets, and Cold Storage/Staking balances.
+A Python-based tool for tracking and valuing cryptocurrency portfolios on the BitShares blockchain. This application monitors Liquidity Pools (LPs), wallet assets, and Credit Offers, providing real-time USD valuation based on on-chain data.
 
-## Key Features
+It features two primary modes:
+*   **Private Mode:** Tracks your specific account balances, LP shares, and calculates your personal portfolio value.
+*   **Public Mode:** Displays global statistics (Total Value Locked - TVL) for configured pools and offers, without requiring user account data.
 
-*   **Multi-Portfolio Support**: Organizes assets into distinct strategies (e.g., USD Yield, Growth/TWENTIX, BTWTY Ecosystem, Staking).
-*   **Smart LP Valuation**:
-    *   Automatically values Liquidity Pool tokens based on the underlying assets.
-    *   Uses a "2x Stablecoin" or "2x Reference Asset" strategy for accurate TVL calculation.
-    *   Handles indirect pricing paths (e.g., Asset -> TWENTIX -> USD).
-*   **Credit Offer Tracking**: Values active Credit Offers (Lending positions) in USD^30D portfolios.
-*   **Historical Logging**: Exports valuation data to `capital_history.csv` for time-series tracking.
-*   **Customizable Price Feeds**: Define specific pools as price references for illiquid or complex assets.
-*   **Batch Processing**: Optimized RPC calls to fetch balances for multiple accounts efficiently.
+## Features
 
-## Project Structure
+*   **Dual Operation Modes:**
+    *   **Private:** User-centric tracking (Balances, LP Shares, Staking).
+    *   **Public:** Ecosystem-centric tracking (Global Pool TVL, Offer TVL).
+*   **Multi-Portfolio Support:** Distinct tracking for different strategies (USD Stable, TWENTIX Growth, BTWTY, etc.).
+*   **Liquidity Pool Valuation:**
+    *   Calculates Total Value Locked (TVL) for configured pools.
+    *   Smart price discovery:
+        *   **Direct:** Uses stablecoin (USDT, USDC) pairs for immediate valuation.
+        *   **Reference:** Derives asset prices (e.g., TWENTIX, BTWTY) from specific reference pools.
+        *   **Indirect:** Traces price paths (Asset -> Reference Asset -> USD) for complex pairs.
+*   **Credit Offer Tracking:** Monitors TVL and ownership of BitShares credit offers.
+*   **Graphical User Interface (GUI):**
+    *   User-friendly dashboard built with `tkinter`.
+    *   **Mode Switcher:** Toggle between Private (User) and Public (Global) views instantly.
+    *   Tabbed views for different portfolios.
+    *   "Pot of Gold" visualizer for XAUT (Gold) pool monitoring.
+*   **Data Logging:**
+    *   **Private Mode:** Saves personal total value to `capital_history.csv`.
+    *   **Public Mode:** Saves global TVL to `capital_history_global.csv`.
+*   **Robust Networking:**
+    *   Connects to multiple public BitShares RPC nodes with automatic failover.
 
-*   **`valuation.py`**: The main entry point. Orchestrates the valuation logic, pricing strategies, and report generation.
-*   **`pool_data_handler.py`**: Handles blockchain interactions (RPC calls), data fetching, and caching to minimize network load.
-*   **`fetch_symbols.py`**: Utility to fetch and cache asset symbols/precisions.
-*   **`user_settings.json`**: Stores user-specific configurations (Account IDs).
-*   **`config_*.json`**: Portfolio-specific configurations defining which pools, assets, or offers to track.
-
-## Configuration
-
-### 1. User Settings
-Create or edit `user_settings.json` to include the BitShares Account IDs you want to track:
-
-```json
-{
-    "accounts": [
-        "1.2.xxxxxx",
-        "1.2.yyyyyy"
-    ]
-}
-```
-
-### 2. Portfolio Configurations
-The engine uses modular JSON files for each portfolio strategy:
-
-*   **`config_core.json` (USD)**: Stablecoin LPs and core value storage.
-*   **`config_growth.json` (TWENTIX)**: High-growth LPs paired with TWENTIX.
-*   **`config_usd_30d.json`**: Credit Offers (Lending markets).
-*   **`config_btwty.json`**: BTWTY ecosystem pools.
-*   **`config_liquid.json`**: Liquid wallet assets (balances held directly in wallet).
-*   **`config_staking.json`**: Offline or external staking balances (loaded via CSV).
-
-## Usage
+## Installation
 
 ### Prerequisites
 *   Python 3.x
-*   Internet connection (to reach BitShares Public Nodes)
+*   `pip` (Python package installer)
 
-### Install Dependencies
+### Dependencies
+Install the required Python packages:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### Run Valuation
+*(Note: The main dependency is `requests` for API calls. `tkinter` is usually included with standard Python installations.)*
+
+## Usage
+
+### Graphical Interface (Recommended)
+Run the GUI for an interactive dashboard:
+
 ```bash
-python valuation.py
+python gui_valuation.py
 ```
 
-## Output
+1.  **Select Mode:** Use the radio buttons at the top to choose **Private** or **Public**.
+2.  **Configure Accounts (Private Mode Only):** Enter your BitShares account name(s) (comma-separated) and click "Save & Scan".
+3.  **Refresh:** Click "Refresh Data" to fetch the latest on-chain values.
 
-The script provides a color-coded console output breaking down:
-1.  **Reference Prices**: Derived prices for core assets (BTS, TWENTIX, BTWTY).
-2.  **Portfolio Breakdown**: Detailed list of assets/pools per portfolio with User Share %, Pool TVL, and User Value in USD.
-3.  **Grand Total**: The aggregated USD value of all configured portfolios.
-4.  **CSV Export**: Appends the total value and timestamp to `capital_history.csv`.
+### Command Line / Headless
+Run the valuation script directly for one-time updates or cron jobs.
 
-## Valuation Logic
+**Private Mode (User Portfolio):**
+```bash
+python valuation.py --mode private
+```
+*Calculates your share of the pools and saves to `capital_history.csv`.*
 
-*   **Liquidity Pools**: `(Balance_Side_A_or_B * Price * 2) * (User_Balance / Total_Supply)`
-*   **Credit Offers**: `Balance * Price`
-*   **Liquid Assets**: `Wallet_Balance * Price`
-*   **Prices**:
-    *   Stablecoins (USDT, USDC, HONEST.USD) are treated as $1.00 reference (or close to it).
-    *   Volatile assets (BTS, TWENTIX) are priced via weighted averages of specific reference pools defined in configs.
+**Public Mode (Global Stats):**
+```bash
+python valuation.py --mode public
+```
+*Calculates the total TVL of all pools and saves to `capital_history_global.csv`.*
+
+*(Running `python valuation.py` without arguments defaults to private mode).*
+
+## Configuration
+
+### User Settings
+Account settings are stored in `user_settings.json` (Private Mode only). You can edit this file directly or use the GUI.
+```json
+{
+    "accounts": ["1.2.x", "1.2.y"],
+    "account_names": ["account-name-1", "account-name-2"]
+}
+```
+
+### Portfolio Configuration
+Portfolios are defined in specific JSON files:
+*   `config_core.json`: Core USD/Stablecoin pools.
+*   `config_growth.json`: High-growth/TWENTIX pools.
+*   `config_btwty.json`: BTWTY asset ecosystem.
+*   `config_liquid.json`: Wallet asset tracking.
+*   `config_staking.json`: Staking balance tracking.
+*   `config_usd_30d.json`: 30-day USD strategies.
+
+Each config file defines the pools to track:
+```json
+{
+    "pools": [
+        {
+            "id": "1.19.xxx",
+            "asset_a": { "symbol": "SYMBOL", "precision": 5 },
+            "asset_b": { "symbol": "USDT", "precision": 6 },
+            "label": "Pool Label"
+        }
+    ]
+}
+```
+
+## Output Files
+
+The application generates CSV files for historical tracking:
+
+*   **`capital_history.csv`**: (Private Mode) Grand total of your user portfolio over time.
+*   **`capital_history_global.csv`**: (Public Mode) Grand total of global TVL over time.
+*   `capital_history_*.csv`: Detailed breakdowns for specific portfolios (re-used for both modes).
+
+## File Structure
+
+*   `valuation.py`: Core logic for calculating portfolio values, handling modes, and generating CSV reports.
+*   `gui_valuation.py`: Tkinter-based GUI with mode switching.
+*   `pool_data_handler.py`: Handles BitShares RPC connections and raw data fetching.
+*   `config_*.json`: Configuration files for different portfolio strategies.
