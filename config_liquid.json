@@ -20,6 +20,12 @@
             "symbol": "BTS",
             "precision": 5,
             "price_reference": "BTS"
+        },
+        {
+            "id": "1.3.4099",
+            "symbol": "XBTSX.STH",
+            "precision": 6,
+            "price_reference": "XBTSX.STH"
         }
     ]
 }

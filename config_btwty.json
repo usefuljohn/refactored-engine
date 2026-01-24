@@ -5,12 +5,6 @@
     },
     "pools": [
         {
-            "id": "1.19.165",
-            "asset_a": { "symbol": "BTWTY", "precision": 5 },
-            "asset_b": { "symbol": "XBTSX.STH", "precision": 6 },
-            "label": "xbtsx.STHBTWTYLP"
-        },
-        {
             "id": "1.19.170",
             "asset_a": { "symbol": "BTWTY", "precision": 5 },
             "asset_b": { "symbol": "XBTSX.BTC", "precision": 8 },
@@ -39,6 +33,12 @@
             "asset_a": { "symbol": "bitEUR", "precision": 4 },
             "asset_b": { "symbol": "BTWTY", "precision": 5 },
             "label": "BTWTY.EURMM"
+        },
+        {
+            "id": "1.19.276",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "BTWTY.EOS", "precision": 4 },
+            "label": "BTWTY.EOSLP"
         }
     ]
 }

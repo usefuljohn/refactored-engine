@@ -1,0 +1,45 @@
+{
+    "main_asset": {
+        "symbol": "XBTSX.STH",
+        "description": "XBTSX.STH Portfolio"
+    },
+    "pools": [
+        {
+            "id": "1.19.63",
+            "asset_a": { "symbol": "XBTSX.STH", "precision": 6 },
+            "asset_b": { "symbol": "XBTSX.USDT", "precision": 6 },
+            "label": "XBTSX.SHU",
+            "is_price_reference": true
+        },
+        {
+            "id": "1.19.95",
+            "asset_a": { "symbol": "XBTSX.STH", "precision": 6 },
+            "asset_b": { "symbol": "XBTSX.BTC", "precision": 8 },
+            "label": "SMARTHOLDEM.BTC"
+        },
+        {
+            "id": "1.19.181",
+            "asset_a": { "symbol": "BTS", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.STH", "precision": 6 },
+            "label": "DEFI.BTSSTH"
+        },
+        {
+            "id": "1.19.104",
+            "asset_a": { "symbol": "XBTSX.STH", "precision": 6 },
+            "asset_b": { "symbol": "XBTSX.RUB", "precision": 4 },
+            "label": "SMARTHOLDEM.RUBL"
+        },
+        {
+            "id": "1.19.165",
+            "asset_a": { "symbol": "BTWTY", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.STH", "precision": 6 },
+            "label": "xbtsx.STHBTWTYLP"
+        },
+        {
+            "id": "1.19.249",
+            "asset_a": { "symbol": "TWENTIX", "precision": 5 },
+            "asset_b": { "symbol": "XBTSX.STH", "precision": 6 },
+            "label": "TWENTIX.STHLP"
+        }
+    ]
+}
