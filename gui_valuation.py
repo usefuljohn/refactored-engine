@@ -142,9 +142,9 @@ class PortfolioGUI:
         self.notebook.add(self.staking_frame, text="Staking Portfolio")
         self.staking_tree = self.create_asset_treeview(self.staking_frame)
 
-        # USD^30D Tab
+        # Credit Portfolio Tab
         self.usd_30d_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.usd_30d_frame, text="USD^30D Portfolio")
+        self.notebook.add(self.usd_30d_frame, text="Credit Portfolio")
         self.usd_30d_tree = self.create_offer_treeview(self.usd_30d_frame)
 
         # --- Footer ---
@@ -174,7 +174,7 @@ class PortfolioGUI:
         self.staking_total_label = ttk.Label(footer_frame, text="Staking Total: $0.00", font=("Helvetica", 10))
         self.staking_total_label.grid(row=1, column=2, sticky=tk.W)
 
-        self.usd_30d_total_label = ttk.Label(footer_frame, text="USD^30D Total: $0.00", font=("Helvetica", 10))
+        self.usd_30d_total_label = ttk.Label(footer_frame, text="Credit Total: $0.00", font=("Helvetica", 10))
         self.usd_30d_total_label.grid(row=2, column=0, sticky=tk.W)
 
         self.btc_total_label = ttk.Label(footer_frame, text="BTC Total: $0.00", font=("Helvetica", 10))
@@ -567,7 +567,7 @@ class PortfolioGUI:
                     elif p["name"] == "Staking":
                         staking_total = relevant_val
                         self.update_tree_generic(self.staking_tree, details, "asset")
-                    elif p["name"] == "USD^30D":
+                    elif p["name"] == "Credit Portfolio":
                         usd_30d_total = relevant_val
                         self.update_tree_generic(self.usd_30d_tree, details, "offer")
             
@@ -628,7 +628,7 @@ class PortfolioGUI:
         
         self.liquid_total_label.config(text=f"Liquid Total: ${liquid:,.2f}")
         self.staking_total_label.config(text=f"Staking Total: ${staking:,.2f}")
-        self.usd_30d_total_label.config(text=f"USD^30D Total: ${usd_30d:,.2f}")
+        self.usd_30d_total_label.config(text=f"Credit Total: ${usd_30d:,.2f}")
         
         self.grand_total_label.config(text=f"GRAND TOTAL: ${grand:,.2f}")
         

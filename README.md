@@ -11,18 +11,18 @@ It features two primary modes:
 *   **Dual Operation Modes:**
     *   **Private:** User-centric tracking (Balances, LP Shares, Staking).
     *   **Public:** Ecosystem-centric tracking (Global Pool TVL, Offer TVL).
-*   **Multi-Portfolio Support:** Distinct tracking for different strategies (USD Stable, TWENTIX Growth, BTWTY, etc.).
+*   **Multi-Portfolio Support:** Distinct tracking for different strategies (USD Stable, BTC, TWENTIX Growth, BTWTY, etc.).
 *   **Liquidity Pool Valuation:**
     *   Calculates Total Value Locked (TVL) for configured pools.
     *   Smart price discovery:
         *   **Direct:** Uses stablecoin (USDT, USDC) pairs for immediate valuation.
-        *   **Reference:** Derives asset prices (e.g., TWENTIX, BTWTY) from specific reference pools.
+        *   **Reference:** Derives asset prices (e.g., XBTSX.BTC, TWENTIX, BTWTY) from specific reference pools.
         *   **Indirect:** Traces price paths (Asset -> Reference Asset -> USD) for complex pairs.
-*   **Credit Offer Tracking:** Monitors TVL and ownership of BitShares credit offers.
+*   **Credit Offer Tracking:** Monitors TVL and ownership of BitShares credit offers in a dedicated Credit Portfolio.
 *   **Graphical User Interface (GUI):**
     *   User-friendly dashboard built with `tkinter`.
     *   **Mode Switcher:** Toggle between Private (User) and Public (Global) views instantly.
-    *   Tabbed views for different portfolios.
+    *   Tabbed views for different portfolios (USD, BTC, TWENTIX, BTWTY, STH, Credit, etc.).
     *   "Pot of Gold" visualizer for XAUT (Gold) pool monitoring.
 *   **Data Logging:**
     *   **Private Mode:** Saves personal total value to `capital_history.csv`.
@@ -89,11 +89,13 @@ Account settings are stored in `user_settings.json` (Private Mode only). You can
 ### Portfolio Configuration
 Portfolios are defined in specific JSON files:
 *   `config_core.json`: Core USD/Stablecoin pools.
+*   `config_btc.json`: Bitcoin (XBTSX.BTC) focused pools.
 *   `config_growth.json`: High-growth/TWENTIX pools.
 *   `config_btwty.json`: BTWTY asset ecosystem.
+*   `config_xbtsx_sth.json`: XBTSX.STH focused pools.
+*   `config_usd_30d.json`: Credit Portfolio (formerly USD^30D) strategies.
 *   `config_liquid.json`: Wallet asset tracking.
 *   `config_staking.json`: Staking balance tracking.
-*   `config_usd_30d.json`: 30-day USD strategies.
 
 Each config file defines the pools to track:
 ```json
@@ -103,7 +105,8 @@ Each config file defines the pools to track:
             "id": "1.19.xxx",
             "asset_a": { "symbol": "SYMBOL", "precision": 5 },
             "asset_b": { "symbol": "USDT", "precision": 6 },
-            "label": "Pool Label"
+            "label": "Pool Label",
+            "is_price_reference": true
         }
     ]
 }
@@ -115,11 +118,11 @@ The application generates CSV files for historical tracking:
 
 *   **`capital_history.csv`**: (Private Mode) Grand total of your user portfolio over time.
 *   **`capital_history_global.csv`**: (Public Mode) Grand total of global TVL over time.
-*   `capital_history_*.csv`: Detailed breakdowns for specific portfolios (re-used for both modes).
+*   `capital_history_*.csv`: Detailed breakdowns for specific portfolios (e.g., `capital_history_btc.csv`, `capital_history_credit.csv`).
 
 ## File Structure
 
 *   `valuation.py`: Core logic for calculating portfolio values, handling modes, and generating CSV reports.
-*   `gui_valuation.py`: Tkinter-based GUI with mode switching.
+*   `gui_valuation.py`: Tkinter-based GUI with mode switching and tabbed portfolio views.
 *   `pool_data_handler.py`: Handles BitShares RPC connections and raw data fetching.
 *   `config_*.json`: Configuration files for different portfolio strategies.

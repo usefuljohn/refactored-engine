@@ -39,7 +39,7 @@ PORTFOLIOS = [
     {"name": "XBTSX.STH", "config": "config_xbtsx_sth.json", "output": "capital_history_xbtsx_sth.csv"},
     {"name": "Liquid", "config": "config_liquid.json", "output": "capital_history_liquid.csv"},
     {"name": "Staking", "config": "config_staking.json", "output": "capital_history_staking.csv"},
-    {"name": "USD^30D", "config": "config_usd_30d.json", "output": "capital_history_usd_30d.csv"},
+    {"name": "Credit Portfolio", "config": "config_usd_30d.json", "output": "capital_history_credit.csv"},
     {"name": "BTS Portfolio", "config": "config_bts.json", "output": "capital_history_bts.csv"},
     {"name": "BTC Portfolio", "config": "config_btc.json", "output": "capital_history_btc.csv"}
 ]
