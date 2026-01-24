@@ -1,0 +1,177 @@
+{
+    "main_asset": {
+        "symbol": "XBTSX.BTC",
+        "description": "Bitcoin Portfolio"
+    },
+    "pools": [
+        {
+            "id": "1.19.58",
+            "asset_a": {
+                "symbol": "BTS",
+                "precision": 5
+            },
+            "asset_b": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "label": "BTS / XBTSX.BTC"
+        },
+        {
+            "id": "1.19.508",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "BTWTY.EOS",
+                "precision": 4
+            },
+            "label": "XBTSX.BTC / BTWTY.EOS"
+        },
+        {
+            "id": "1.19.531",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "XBTSX.A",
+                "precision": 6
+            },
+            "label": "XBTSX.BTC / XBTSX.A"
+        },
+        {
+            "id": "1.19.493",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "XBTSX.ETH",
+                "precision": 7
+            },
+            "label": "XBTSX.BTC / XBTSX.ETH"
+        },
+        {
+            "id": "1.19.122",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "XBTSX.HIVE",
+                "precision": 6
+            },
+            "label": "XBTSX.BTC / XBTSX.HIVE"
+        },
+        {
+            "id": "1.19.516",
+            "asset_a": {
+                "symbol": "XBTSX.DOGE",
+                "precision": 5
+            },
+            "asset_b": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "label": "XBTSX.BTC / XBTSX.DOGE"
+        },
+        {
+            "id": "1.19.170",
+            "asset_a": {
+                "symbol": "BTWTY",
+                "precision": 5
+            },
+            "asset_b": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "label": "BTWTY / XBTSX.BTC"
+        },
+        {
+            "id": "1.19.443",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "HONEST.MONEY",
+                "precision": 8
+            },
+            "label": "XBTSX.BTC / HONEST.MONEY"
+        },
+        {
+            "id": "1.19.160",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "XBTSX.USDT",
+                "precision": 6
+            },
+            "label": "XBTSX.BTC / XBTSX.USDT",
+            "is_price_reference": true
+        },
+        {
+            "id": "1.19.518",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "IOB.XRP",
+                "precision": 4
+            },
+            "label": "XBTSX.BTC / IOB.XRP"
+        },
+        {
+            "id": "1.19.45",
+            "asset_a": {
+                "symbol": "GDEX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "label": "GDEX.BTC / XBTSX.BTC"
+        },
+        {
+            "id": "1.19.200",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "XBTSX.RUB",
+                "precision": 4
+            },
+            "label": "XBTSX.BTC / XBTSX.RUB"
+        },
+        {
+            "id": "1.19.442",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "HONEST.BTC",
+                "precision": 8
+            },
+            "label": "XBTSX.BTC / HONEST.BTC"
+        },
+        {
+            "id": "1.19.526",
+            "asset_a": {
+                "symbol": "XBTSX.BTC",
+                "precision": 8
+            },
+            "asset_b": {
+                "symbol": "XBTSX.ETC",
+                "precision": 7
+            },
+            "label": "XBTSX.BTC / XBTSX.ETC"
+        }
+    ]
+}

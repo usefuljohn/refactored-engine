@@ -11,12 +11,6 @@
             "label": "iob.BTSXRP"
         },
         {
-            "id": "1.19.58",
-            "asset_a": { "symbol": "BTS", "precision": 5 },
-            "asset_b": { "symbol": "XBTSX.BTC", "precision": 8 },
-            "label": "ABITS.BTSXBTCLP"
-        },
-        {
             "id": "1.19.48",
             "asset_a": { "symbol": "BTS", "precision": 5 },
             "asset_b": { "symbol": "XBTSX.USDT", "precision": 6 },

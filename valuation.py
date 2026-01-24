@@ -40,7 +40,8 @@ PORTFOLIOS = [
     {"name": "Liquid", "config": "config_liquid.json", "output": "capital_history_liquid.csv"},
     {"name": "Staking", "config": "config_staking.json", "output": "capital_history_staking.csv"},
     {"name": "USD^30D", "config": "config_usd_30d.json", "output": "capital_history_usd_30d.csv"},
-    {"name": "BTS Portfolio", "config": "config_bts.json", "output": "capital_history_bts.csv"}
+    {"name": "BTS Portfolio", "config": "config_bts.json", "output": "capital_history_bts.csv"},
+    {"name": "BTC Portfolio", "config": "config_btc.json", "output": "capital_history_btc.csv"}
 ]
 
 def load_user_settings():
@@ -152,6 +153,53 @@ def get_bts_price_usd(config):
         return avg_price
         
     print("  ! No price reference found for BTS.")
+    return None
+
+def get_btc_price_usd(config):
+    """Determine XBTSX.BTC price in USD using reference pools"""
+    candidates = []
+    
+    for pool in config.get("pools", []):
+        if pool.get("is_price_reference"):
+            # Check for XBTSX.BTC
+            if "XBTSX.BTC" not in (pool["asset_a"]["symbol"], pool["asset_b"]["symbol"]):
+                continue
+
+            p_data = get_pool_data(pool["id"])
+            if not p_data:
+                continue
+                
+            is_btc_a = pool["asset_a"]["symbol"] == "XBTSX.BTC"
+            
+            # Get precisions
+            prec_a = pool["asset_a"]["precision"]
+            prec_b = pool["asset_b"]["precision"]
+            
+            bal_a = Decimal(p_data["balance_a"]) / (Decimal(10) ** prec_a)
+            bal_b = Decimal(p_data["balance_b"]) / (Decimal(10) ** prec_b)
+            
+            if bal_a == 0 or bal_b == 0:
+                continue
+                
+            if is_btc_a:
+                # Pair is XBTSX.BTC / USD
+                # Price of 1 BTC = USD_Bal / BTC_Bal = bal_b / bal_a
+                price = bal_b / bal_a
+                label = pool["asset_b"]["symbol"]
+            else:
+                # Pair is USD / XBTSX.BTC
+                # Price of 1 BTC = USD_Bal / BTC_Bal = bal_a / bal_b
+                price = bal_a / bal_b
+                label = pool["asset_a"]["symbol"]
+            
+            print(f"  Reference Price from {label} ({pool['id']}): ${price:.6f}")
+            candidates.append(price)
+            
+    if candidates:
+        avg_price = sum(candidates) / len(candidates)
+        print(f"  > Average XBTSX.BTC Price: ${avg_price:.6f}")
+        return avg_price
+        
     return None
 
 def get_twentix_price_usd(config):
@@ -700,6 +748,7 @@ def process_portfolio(portfolio, prices, accounts, user_balances, mode="private"
     btwty_price = prices.get("BTWTY")
     bts_price = prices.get("BTS")
     xbtsx_sth_price = prices.get("XBTSX.STH")
+    btc_price = prices.get("XBTSX.BTC")
 
     print(fmt_header(f"\n=== Processing Portfolio: {name} ==="))
     
@@ -819,6 +868,13 @@ def process_portfolio(portfolio, prices, accounts, user_balances, mode="private"
                 else:
                     pool_tvl_usd = (balance_b * xbtsx_sth_price) * 2
 
+            # Custom: XBTSX.BTC Valuation
+            elif btc_price and (asset_a_sym == "XBTSX.BTC" or asset_b_sym == "XBTSX.BTC"):
+                if asset_a_sym == "XBTSX.BTC":
+                    pool_tvl_usd = (balance_a * btc_price) * 2
+                else:
+                    pool_tvl_usd = (balance_b * btc_price) * 2
+
             # Method 2: TWENTIX Reference (Direct)
             elif asset_a_sym == "TWENTIX" or asset_b_sym == "TWENTIX":
                 is_twentix_a = asset_a_sym == "TWENTIX"
@@ -919,7 +975,7 @@ def main():
     # We'll peek at the Core config for this
     print(fmt_header("\n--- Establishing Reference Price ---"))
     
-    prices = {"TWENTIX": None, "BTWTY.EOS": None, "BTWTY": None, "XBTSX.STH": None}
+    prices = {"TWENTIX": None, "BTWTY.EOS": None, "BTWTY": None, "XBTSX.STH": None, "XBTSX.BTC": None}
     
     # Get BTWTY.EOS price from Core Config
     try:
@@ -954,6 +1010,14 @@ def main():
             prices["BTS"] = get_bts_price_usd(bts_config)
     except Exception as e:
         print(f"Error loading config_bts.json for prices: {e}")
+
+    # Get XBTSX.BTC price from BTC Portfolio Config
+    try:
+        with open("config_btc.json", "r") as f:
+            btc_config = json.load(f)
+            prices["XBTSX.BTC"] = get_btc_price_usd(btc_config)
+    except Exception as e:
+        print(f"Error loading config_btc.json for prices: {e}")
         
     grand_total_user = Decimal(0)
     grand_total_global = Decimal(0)

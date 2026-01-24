@@ -127,6 +127,11 @@ class PortfolioGUI:
         self.notebook.add(self.bts_frame, text="BTS Portfolio")
         self.bts_tree = self.create_treeview(self.bts_frame)
 
+        # BTC Tab
+        self.btc_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.btc_frame, text="BTC Portfolio")
+        self.btc_tree = self.create_treeview(self.btc_frame)
+
         # Liquid Tab
         self.liquid_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.liquid_frame, text="Liquid Portfolio")
@@ -171,6 +176,9 @@ class PortfolioGUI:
 
         self.usd_30d_total_label = ttk.Label(footer_frame, text="USD^30D Total: $0.00", font=("Helvetica", 10))
         self.usd_30d_total_label.grid(row=2, column=0, sticky=tk.W)
+
+        self.btc_total_label = ttk.Label(footer_frame, text="BTC Total: $0.00", font=("Helvetica", 10))
+        self.btc_total_label.grid(row=2, column=1, sticky=tk.W)
         
         ttk.Separator(footer_frame, orient=tk.HORIZONTAL).grid(row=3, column=0, columnspan=3, sticky="ew", pady=5)
         
@@ -450,7 +458,7 @@ class PortfolioGUI:
         
         # Clear existing data
         for tree in [self.usd_tree, self.growth_tree, self.xbtsx_sth_tree, self.bts_tree, 
-                     self.liquid_tree, self.staking_tree, self.usd_30d_tree]:
+                     self.btc_tree, self.liquid_tree, self.staking_tree, self.usd_30d_tree]:
             for row in tree.get_children():
                 tree.delete(row)
             
@@ -478,7 +486,7 @@ class PortfolioGUI:
                     user_balances[acct_id] = get_all_account_balances(acct_id)
 
             # 1. Get Prices
-            prices = {"TWENTIX": None, "BTWTY.EOS": None, "BTWTY": None, "XBTSX.STH": None}
+            prices = {"TWENTIX": None, "BTWTY.EOS": None, "BTWTY": None, "XBTSX.STH": None, "XBTSX.BTC": None}
             try:
                 with open("config_core.json", "r") as f:
                     core_config = json.load(f)
@@ -506,6 +514,7 @@ class PortfolioGUI:
             growth_total = Decimal(0)
             xbtsx_sth_total = Decimal(0)
             bts_total = Decimal(0)
+            btc_total = Decimal(0)
             liquid_total = Decimal(0)
             staking_total = Decimal(0)
             usd_30d_total = Decimal(0)
@@ -517,6 +526,14 @@ class PortfolioGUI:
                     prices["BTS"] = valuation.get_bts_price_usd(bts_config)
             except Exception as e:
                 print(f"BTS Price error: {e}")
+
+            # Fetch XBTSX.BTC Price
+            try:
+                with open("config_btc.json", "r") as f:
+                    btc_config = json.load(f)
+                    prices["XBTSX.BTC"] = valuation.get_btc_price_usd(btc_config)
+            except Exception as e:
+                print(f"XBTSX.BTC Price error: {e}")
             
             # 2. Process Portfolios
             for p in valuation.PORTFOLIOS:
@@ -541,6 +558,9 @@ class PortfolioGUI:
                     elif p["name"] == "BTS Portfolio":
                         bts_total = relevant_val
                         self.update_tree_generic(self.bts_tree, details, "standard")
+                    elif p["name"] == "BTC Portfolio":
+                        btc_total = relevant_val
+                        self.update_tree_generic(self.btc_tree, details, "standard")
                     elif p["name"] == "Liquid":
                         liquid_total = relevant_val
                         self.update_tree_generic(self.liquid_tree, details, "asset")
@@ -553,7 +573,7 @@ class PortfolioGUI:
             
             # 3. Update UI Labels
             self.root.after(0, lambda: self.update_labels(
-                usd_total, growth_total, xbtsx_sth_total, bts_total, liquid_total, staking_total, usd_30d_total, grand_total
+                usd_total, growth_total, xbtsx_sth_total, bts_total, btc_total, liquid_total, staking_total, usd_30d_total, grand_total
             ))
             
             status_msg = "Data Updated (Public Mode)" if mode == "public" else "Data Updated (User Portfolio)"
@@ -599,11 +619,12 @@ class PortfolioGUI:
                     
         self.root.after(0, _update)
 
-    def update_labels(self, usd, growth, xbtsx_sth, bts, liquid, staking, usd_30d, grand):
+    def update_labels(self, usd, growth, xbtsx_sth, bts, btc, liquid, staking, usd_30d, grand):
         self.usd_total_label.config(text=f"USD Total: ${usd:,.2f}")
         self.growth_total_label.config(text=f"TWENTIX Total: ${growth:,.2f}")
         self.xbtsx_sth_total_label.config(text=f"XBTSX.STH Total: ${xbtsx_sth:,.2f}")
         self.bts_total_label.config(text=f"BTS Total: ${bts:,.2f}")
+        self.btc_total_label.config(text=f"BTC Total: ${btc:,.2f}")
         
         self.liquid_total_label.config(text=f"Liquid Total: ${liquid:,.2f}")
         self.staking_total_label.config(text=f"Staking Total: ${staking:,.2f}")

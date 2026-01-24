@@ -5,12 +5,6 @@
     },
     "pools": [
         {
-            "id": "1.19.170",
-            "asset_a": { "symbol": "BTWTY", "precision": 5 },
-            "asset_b": { "symbol": "XBTSX.BTC", "precision": 8 },
-            "label": "BTWTY.XBTCMM"
-        },
-        {
             "id": "1.19.115",
             "asset_a": { "symbol": "BTWTY", "precision": 5 },
             "asset_b": { "symbol": "XBTSX.DOGE", "precision": 5 },
