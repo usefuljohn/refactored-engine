@@ -15,6 +15,29 @@ class PortfolioGUI:
         self.root.geometry("900x700") # Increased size for new tabs
         
         self.gold_price = Decimal(0)
+        
+        # --- Load Pot of Gold Image ---
+        self.pot_image = None
+        try:
+            # Try CWD, then script parent
+            paths_to_try = [
+                "potofgold.png",
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "potofgold.png"),
+                os.path.join("refactoredco", "potofgold.png")
+            ]
+            for path in paths_to_try:
+                if os.path.exists(path):
+                    img = tk.PhotoImage(file=path)
+                    # Subsample if much larger than 50x50
+                    w, h = img.width(), img.height()
+                    if w > 60 or h > 60:
+                        factor = max(w // 50, h // 50)
+                        if factor > 1:
+                            img = img.subsample(factor)
+                    self.pot_image = img
+                    break
+        except Exception as e:
+            print(f"Note: Could not load potofgold.png: {e}")
 
         # Style
         style = ttk.Style()
@@ -191,13 +214,17 @@ class PortfolioGUI:
         self.status_bar.pack(fill=tk.X, side=tk.BOTTOM)
 
     def draw_pot_of_gold(self, canvas):
-        canvas.create_arc(5, 20, 45, 45, start=180, extent=180, fill="#333", outline="black")
-        canvas.create_line(5, 20, 45, 20, fill="black", width=2)
-        canvas.create_oval(10, 15, 20, 25, fill="gold", outline="goldenrod")
-        canvas.create_oval(20, 12, 30, 22, fill="gold", outline="goldenrod")
-        canvas.create_oval(30, 15, 40, 25, fill="gold", outline="goldenrod")
-        canvas.create_oval(15, 20, 25, 30, fill="gold", outline="goldenrod")
-        canvas.create_oval(25, 20, 35, 30, fill="gold", outline="goldenrod")
+        if self.pot_image:
+            # Center the image in the 50x50 canvas
+            canvas.create_image(25, 25, image=self.pot_image)
+        else:
+            canvas.create_arc(5, 20, 45, 45, start=180, extent=180, fill="#333", outline="black")
+            canvas.create_line(5, 20, 45, 20, fill="black", width=2)
+            canvas.create_oval(10, 15, 20, 25, fill="gold", outline="goldenrod")
+            canvas.create_oval(20, 12, 30, 22, fill="gold", outline="goldenrod")
+            canvas.create_oval(30, 15, 40, 25, fill="gold", outline="goldenrod")
+            canvas.create_oval(15, 20, 25, 30, fill="gold", outline="goldenrod")
+            canvas.create_oval(25, 20, 35, 30, fill="gold", outline="goldenrod")
 
     def fetch_gold_price(self):
         try:
